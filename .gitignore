@@ -1,0 +1,14 @@
+venv/ 
+pycache/ 
+*.pyc 
+*.pyo 
+*.pyd
+
+# Environment variables
+.env .env.local .env.development .env.production
+# Sensitive data 
+data/ 
+# Logs
+*.log
+# System files
+.DS_Store
