@@ -1,0 +1,4667 @@
+{
+    "admin": [
+        {
+            "id": "1",
+            "username": "admin1",
+            "password": "$2b$12$V2Aw7GvPfdtSwK1GOUr6eexD6MITPVA1jCWia6j5dkLj.0Cq4m1UG",
+            "email": "admin1@example.com",
+            "role": "admin",
+            "createdAt": "2025-01-23"
+        },
+        {
+            "id": "2",
+            "username": "admin2",
+            "password": "$2b$12$B1GTpmxnEl7PNiECG5I.4.KK3iuSgalPigw.7cFnATf.1d7YCGFrq",
+            "email": "admin2@example.com",
+            "role": "admin",
+            "createdAt": "2025-01-24"
+        }
+    ],
+    "supervisor": [
+        {
+            "id": "1",
+            "staffId": "STAFF001",
+            "password": "$2b$12$kkTugxP/OpUxdPi73AF2M.jTLgtvkYJsHY5F9D/6T2oE67/p4WC0.",
+            "email": "supervisor1@example.com",
+            "role": "supervisor",
+            "name": "Supervisor1",
+            "surname": "Last1",
+            "phone": "123-456-0001",
+            "address": "Address 1",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School A",
+            "img": "",
+            "createdAt": "2025-04-24"
+        },
+        {
+            "id": "2",
+            "staffId": "STAFF002",
+            "password": "$2b$12$G3wVwagju6GhRUqQyOvW7.RRd8G5bUmYVR4LXcdhIPm4Jv4Wf1Ds2",
+            "email": "supervisor2@example.com",
+            "role": "supervisor",
+            "name": "Supervisor2",
+            "surname": "Last2",
+            "phone": "123-456-0002",
+            "address": "Address 2",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School B",
+            "img": "",
+            "createdAt": "2025-04-25"
+        },
+        {
+            "id": "3",
+            "staffId": "STAFF003",
+            "password": "$2b$12$Qb1AtLZqqaiOnMMzoawIKuKVk/O1DkP0DMCAiU9pBprfyobMpagRC",
+            "email": "supervisor3@example.com",
+            "role": "supervisor",
+            "name": "Supervisor3",
+            "surname": "Last3",
+            "phone": "123-456-0003",
+            "address": "Address 3",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School C",
+            "img": "",
+            "createdAt": "2025-04-26"
+        },
+        {
+            "id": "4",
+            "staffId": "STAFF004",
+            "password": "$2b$12$Otl9NRLMCREpCGEJbbkcTuXk4PRZ7VB2KoXLiwQz5GSoJdwYSTID6",
+            "email": "supervisor4@example.com",
+            "role": "supervisor",
+            "name": "Supervisor4",
+            "surname": "Last4",
+            "phone": "123-456-0004",
+            "address": "Address 4",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School D",
+            "img": "",
+            "createdAt": "2025-04-27"
+        },
+        {
+            "id": "5",
+            "staffId": "STAFF005",
+            "password": "$2b$12$R7Gz./GLigqve1lJaYSVOekf//TJGBoKPoc./FnvWWTw1fM.FAuyi",
+            "email": "supervisor5@example.com",
+            "role": "supervisor",
+            "name": "Supervisor5",
+            "surname": "Last5",
+            "phone": "123-456-0005",
+            "address": "Address 5",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School E",
+            "img": "",
+            "createdAt": "2025-04-28"
+        },
+        {
+            "id": "6",
+            "staffId": "STAFF006",
+            "password": "$2b$12$IprqrCPRVcolhwBuXQPHLeCghjirx3kpSjNw3If/An2JbBLPDSA9q",
+            "email": "supervisor6@example.com",
+            "role": "supervisor",
+            "name": "Supervisor6",
+            "surname": "Last6",
+            "phone": "123-456-0006",
+            "address": "Address 6",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School F",
+            "img": "",
+            "createdAt": "2025-04-29"
+        },
+        {
+            "id": "7",
+            "staffId": "STAFF007",
+            "password": "$2b$12$TeM5QY4mWItsXkBDlqk./eNDDgtWSSWRFSvfsDQFgyjNKjyNgrJWS",
+            "email": "supervisor7@example.com",
+            "role": "supervisor",
+            "name": "Supervisor7",
+            "surname": "Last7",
+            "phone": "123-456-0007",
+            "address": "Address 7",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School G",
+            "img": "",
+            "createdAt": "2025-04-30"
+        },
+        {
+            "id": "8",
+            "staffId": "STAFF008",
+            "password": "$2b$12$KLAjla39u7aMXs0goGg5FeAvr34i9tK2Z1BthQIrmWphGRr/X0edC",
+            "email": "supervisor8@example.com",
+            "role": "supervisor",
+            "name": "Supervisor8",
+            "surname": "Last8",
+            "phone": "123-456-0008",
+            "address": "Address 8",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School H",
+            "img": "",
+            "createdAt": "2025-05-01"
+        },
+        {
+            "id": "9",
+            "staffId": "STAFF009",
+            "password": "$2b$12$vqgwGJo5MW8yN0WXldT0jOxZ.yzB/mIFfKCptagYXV5k8kqN72S3u",
+            "email": "supervisor9@example.com",
+            "role": "supervisor",
+            "name": "Supervisor9",
+            "surname": "Last9",
+            "phone": "123-456-0009",
+            "address": "Address 9",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School A",
+            "img": "",
+            "createdAt": "2025-05-02"
+        },
+        {
+            "id": "10",
+            "staffId": "STAFF010",
+            "password": "$2b$12$6JGZu6/QrkNzMQFlqOtoTOViA/14OUD0ZsSAvd2pLJdrFUpMr1BB6",
+            "email": "supervisor10@example.com",
+            "role": "supervisor",
+            "name": "Supervisor10",
+            "surname": "Last10",
+            "phone": "123-456-00010",
+            "address": "Address 10",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1985-01-01",
+            "placeOfSupervision": "School B",
+            "img": "",
+            "createdAt": "2025-05-03"
+        }
+    ],
+    "teacherTrainee": [
+        {
+            "id": "101",
+            "regNo": "SLU/EDU/001",
+            "password": "$2b$12$GjXHGWuMg/PEe9paLhCC2eTq43JbMqL8MN5P3BXxdtUKNbkbYIj16",
+            "email": "trainee1@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee1",
+            "surname": "Student1",
+            "phone": "123-456-0101",
+            "address": "Trainee Address 1",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 81,
+            "img": "",
+            "createdAt": "2025-03-25"
+        },
+        {
+            "id": "102",
+            "regNo": "SLU/EDU/002",
+            "password": "$2b$12$PLBycswEcJhNTgPJX59Bpe4xRMF1LEyC.xaVX87ykW8ONC2lkOO5O",
+            "email": "trainee2@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee2",
+            "surname": "Student2",
+            "phone": "123-456-0102",
+            "address": "Trainee Address 2",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 82,
+            "img": "",
+            "createdAt": "2025-03-26"
+        },
+        {
+            "id": "103",
+            "regNo": "SLU/EDU/003",
+            "password": "$2b$12$L.TENgvdK5a9MTY3uhai7OCo2rsI7VKxN.GftJrVYVtHbqlQh9.fa",
+            "email": "trainee3@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee3",
+            "surname": "Student3",
+            "phone": "123-456-0103",
+            "address": "Trainee Address 3",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 83,
+            "img": "",
+            "createdAt": "2025-03-27"
+        },
+        {
+            "id": "104",
+            "regNo": "SLU/EDU/004",
+            "password": "$2b$12$8s9SK1r1ycXa5KKNmKpez.fuljq4BQomFALh7O1qtsOvfIDJAbMOq",
+            "email": "trainee4@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee4",
+            "surname": "Student4",
+            "phone": "123-456-0104",
+            "address": "Trainee Address 4",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 84,
+            "img": "",
+            "createdAt": "2025-03-28"
+        },
+        {
+            "id": "105",
+            "regNo": "SLU/EDU/005",
+            "password": "$2b$12$m9ac5gagUis9Hs6HQKqkP.WWSg82P7Ntv.pgW7NXjQgALRHfN/eBq",
+            "email": "trainee5@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee5",
+            "surname": "Student5",
+            "phone": "123-456-0105",
+            "address": "Trainee Address 5",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 85,
+            "img": "",
+            "createdAt": "2025-03-29"
+        },
+        {
+            "id": "106",
+            "regNo": "SLU/EDU/006",
+            "password": "$2b$12$cYiOp3HiDfzgUfI9i91AO.GL0jSH1TYzOHx/WqqC93PbhuaD9bHbK",
+            "email": "trainee6@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee6",
+            "surname": "Student6",
+            "phone": "123-456-0106",
+            "address": "Trainee Address 6",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 86,
+            "img": "",
+            "createdAt": "2025-03-30"
+        },
+        {
+            "id": "107",
+            "regNo": "SLU/EDU/007",
+            "password": "$2b$12$PJnIL48Mx8v2MubgwCRPCeIbJqyzUu/eBzM4Lrnz5UaNx45pz0MzO",
+            "email": "trainee7@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee7",
+            "surname": "Student7",
+            "phone": "123-456-0107",
+            "address": "Trainee Address 7",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 87,
+            "img": "",
+            "createdAt": "2025-03-31"
+        },
+        {
+            "id": "108",
+            "regNo": "SLU/EDU/008",
+            "password": "$2b$12$Sri2L4TceBsMwklSEa0Eoe9esvqBikq.AGNHi/f/j9u05KKeZ3OzW",
+            "email": "trainee8@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee8",
+            "surname": "Student8",
+            "phone": "123-456-0108",
+            "address": "Trainee Address 8",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 88,
+            "img": "",
+            "createdAt": "2025-04-01"
+        },
+        {
+            "id": "109",
+            "regNo": "SLU/EDU/009",
+            "password": "$2b$12$jKiuboGaal7MmCbRjDUEv.tmpDLhr8WqCuAQDo5vrLV5E6Ungsw8K",
+            "email": "trainee9@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee9",
+            "surname": "Student9",
+            "phone": "123-456-0109",
+            "address": "Trainee Address 9",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 89,
+            "img": "",
+            "createdAt": "2025-04-02"
+        },
+        {
+            "id": "110",
+            "regNo": "SLU/EDU/010",
+            "password": "$2b$12$dna4Y0KRZ.mNclzaAPleuuJGDQ.7AjiigAxcuLNbikQMKnwnVVsA6",
+            "email": "trainee10@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee10",
+            "surname": "Student10",
+            "phone": "123-456-0110",
+            "address": "Trainee Address 10",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 90,
+            "img": "",
+            "createdAt": "2025-04-03"
+        },
+        {
+            "id": "111",
+            "regNo": "SLU/EDU/011",
+            "password": "$2b$12$Uwi/ZzFs6f5YhNciR1RhXe5wUzIE03NfnzBAGq.WGvF4nYN0K2P0i",
+            "email": "trainee11@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee11",
+            "surname": "Student11",
+            "phone": "123-456-0111",
+            "address": "Trainee Address 11",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 91,
+            "img": "",
+            "createdAt": "2025-04-04"
+        },
+        {
+            "id": "112",
+            "regNo": "SLU/EDU/012",
+            "password": "$2b$12$medU1GKwZtBq6jvO1GaeHe32PwxLV5noImwZOoMnnscFJaCiDIyIa",
+            "email": "trainee12@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee12",
+            "surname": "Student12",
+            "phone": "123-456-0112",
+            "address": "Trainee Address 12",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 92,
+            "img": "",
+            "createdAt": "2025-04-05"
+        },
+        {
+            "id": "113",
+            "regNo": "SLU/EDU/013",
+            "password": "$2b$12$LQG45Vzi7Z5yJ0ux3Hacpu4Jssmq2BrG/Eo8e1nvRyL3STw14evtC",
+            "email": "trainee13@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee13",
+            "surname": "Student13",
+            "phone": "123-456-0113",
+            "address": "Trainee Address 13",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 93,
+            "img": "",
+            "createdAt": "2025-04-06"
+        },
+        {
+            "id": "114",
+            "regNo": "SLU/EDU/014",
+            "password": "$2b$12$4lfgWnRnzU5KwgQwcM.ehOFzjIxOlAjcf0DRw6PJu5owEcOCarBM6",
+            "email": "trainee14@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee14",
+            "surname": "Student14",
+            "phone": "123-456-0114",
+            "address": "Trainee Address 14",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 94,
+            "img": "",
+            "createdAt": "2025-04-07"
+        },
+        {
+            "id": "115",
+            "regNo": "SLU/EDU/015",
+            "password": "$2b$12$Jc9WnWi0D56WPRTRH8RXYO9.zNVi8D5RDnrygeybk3wkl297YCio.",
+            "email": "trainee15@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee15",
+            "surname": "Student15",
+            "phone": "123-456-0115",
+            "address": "Trainee Address 15",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 95,
+            "img": "",
+            "createdAt": "2025-04-08"
+        },
+        {
+            "id": "116",
+            "regNo": "SLU/EDU/016",
+            "password": "$2b$12$832RcCzP4SNlmSYliglJVOht3Yr26H6G8GYhXyVTJniFOJeAiZrZy",
+            "email": "trainee16@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee16",
+            "surname": "Student16",
+            "phone": "123-456-0116",
+            "address": "Trainee Address 16",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 96,
+            "img": "",
+            "createdAt": "2025-04-09"
+        },
+        {
+            "id": "117",
+            "regNo": "SLU/EDU/017",
+            "password": "$2b$12$L0qy280hge7i0Q0fTi2qa.H4aI4CN7royTya4/93hyweiH.XlxgmO",
+            "email": "trainee17@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee17",
+            "surname": "Student17",
+            "phone": "123-456-0117",
+            "address": "Trainee Address 17",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 97,
+            "img": "",
+            "createdAt": "2025-04-10"
+        },
+        {
+            "id": "118",
+            "regNo": "SLU/EDU/018",
+            "password": "$2b$12$tmcExDHjA.PWetGuNyZxb.B4RF8gCQK9YwOOGm0CehcSdIP3hlFGm",
+            "email": "trainee18@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee18",
+            "surname": "Student18",
+            "phone": "123-456-0118",
+            "address": "Trainee Address 18",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 98,
+            "img": "",
+            "createdAt": "2025-04-11"
+        },
+        {
+            "id": "119",
+            "regNo": "SLU/EDU/019",
+            "password": "$2b$12$0WSxd1d2.yUMMvswd8nRneBFTT32O9mQwDgX8IpXZlXrnO1lrgf.u",
+            "email": "trainee19@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee19",
+            "surname": "Student19",
+            "phone": "123-456-0119",
+            "address": "Trainee Address 19",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 99,
+            "img": "",
+            "createdAt": "2025-04-12"
+        },
+        {
+            "id": "120",
+            "regNo": "SLU/EDU/020",
+            "password": "$2b$12$VgrIPTKUeD1pX7D0IyUsfuLDAqrAWfjCoc7rldQEFqRNRLS/2EmMa",
+            "email": "trainee20@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee20",
+            "surname": "Student20",
+            "phone": "123-456-0120",
+            "address": "Trainee Address 20",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 80,
+            "img": "",
+            "createdAt": "2025-04-13"
+        },
+        {
+            "id": "121",
+            "regNo": "SLU/EDU/021",
+            "password": "$2b$12$/JsT4pgwUD/Y2WmnLXvdW.RThpVKQFYUX3CEaUyxhaZI7JCv90gxi",
+            "email": "trainee21@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee21",
+            "surname": "Student21",
+            "phone": "123-456-0121",
+            "address": "Trainee Address 21",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 81,
+            "img": "",
+            "createdAt": "2025-04-14"
+        },
+        {
+            "id": "122",
+            "regNo": "SLU/EDU/022",
+            "password": "$2b$12$u.RfqFafUn7LWyW5vIJuxeJQMJsdwOmIcj9g1N7KCEub6NnJB/Pny",
+            "email": "trainee22@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee22",
+            "surname": "Student22",
+            "phone": "123-456-0122",
+            "address": "Trainee Address 22",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 82,
+            "img": "",
+            "createdAt": "2025-04-15"
+        },
+        {
+            "id": "123",
+            "regNo": "SLU/EDU/023",
+            "password": "$2b$12$14Er2t0P6zQA6g0OK4Yml.w5hqtyLogLmbXgpKRM37W/nSF0TmERC",
+            "email": "trainee23@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee23",
+            "surname": "Student23",
+            "phone": "123-456-0123",
+            "address": "Trainee Address 23",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 83,
+            "img": "",
+            "createdAt": "2025-04-16"
+        },
+        {
+            "id": "124",
+            "regNo": "SLU/EDU/024",
+            "password": "$2b$12$sEzwyWme4/dQTtYx6j5yBefvuesFHPdazYAAkpVzXwdrrP7xJo4Ha",
+            "email": "trainee24@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee24",
+            "surname": "Student24",
+            "phone": "123-456-0124",
+            "address": "Trainee Address 24",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 84,
+            "img": "",
+            "createdAt": "2025-04-17"
+        },
+        {
+            "id": "125",
+            "regNo": "SLU/EDU/025",
+            "password": "$2b$12$CkC8gfI4XaM3RWnzhTblP.oBAezEAWOUzUNFlH6Mv5piknXSRw6cm",
+            "email": "trainee25@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee25",
+            "surname": "Student25",
+            "phone": "123-456-0125",
+            "address": "Trainee Address 25",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 85,
+            "img": "",
+            "createdAt": "2025-04-18"
+        },
+        {
+            "id": "126",
+            "regNo": "SLU/EDU/026",
+            "password": "$2b$12$kjYxJlbGd2xJSUNWnr3IbuKoufspciax/VdkAUVIf0eontW3zN4fG",
+            "email": "trainee26@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee26",
+            "surname": "Student26",
+            "phone": "123-456-0126",
+            "address": "Trainee Address 26",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 86,
+            "img": "",
+            "createdAt": "2025-04-19"
+        },
+        {
+            "id": "127",
+            "regNo": "SLU/EDU/027",
+            "password": "$2b$12$f09YsLXMH6WvE0dukabYk.vgSg9ukRsLRcQ/jw1mtSJaUDT4/NhGa",
+            "email": "trainee27@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee27",
+            "surname": "Student27",
+            "phone": "123-456-0127",
+            "address": "Trainee Address 27",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 87,
+            "img": "",
+            "createdAt": "2025-04-20"
+        },
+        {
+            "id": "128",
+            "regNo": "SLU/EDU/028",
+            "password": "$2b$12$LkIP68OzDyM/If9UIvriCuBifrxw45XiCvkmLr4gnmF0.4iSmKFIi",
+            "email": "trainee28@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee28",
+            "surname": "Student28",
+            "phone": "123-456-0128",
+            "address": "Trainee Address 28",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 88,
+            "img": "",
+            "createdAt": "2025-04-21"
+        },
+        {
+            "id": "129",
+            "regNo": "SLU/EDU/029",
+            "password": "$2b$12$SIppCdASb60hcISXmdrwHevxmWkdATc/JpkMghvzUTMk9Y2v5iUO6",
+            "email": "trainee29@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee29",
+            "surname": "Student29",
+            "phone": "123-456-0129",
+            "address": "Trainee Address 29",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 89,
+            "img": "",
+            "createdAt": "2025-04-22"
+        },
+        {
+            "id": "130",
+            "regNo": "SLU/EDU/030",
+            "password": "$2b$12$PXCQ/Vs967A1G6k/g26qxOb5p3J27Oein0iDzms00qEQZFMClmR/a",
+            "email": "trainee30@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee30",
+            "surname": "Student30",
+            "phone": "123-456-0130",
+            "address": "Trainee Address 30",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 90,
+            "img": "",
+            "createdAt": "2025-04-23"
+        },
+        {
+            "id": "131",
+            "regNo": "SLU/EDU/031",
+            "password": "$2b$12$/eXIjmoh2XljqiJoRQFoI.mxTz84HElfxLL4mDS3vIVny2o3j8AXm",
+            "email": "trainee31@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee31",
+            "surname": "Student31",
+            "phone": "123-456-0131",
+            "address": "Trainee Address 31",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 91,
+            "img": "",
+            "createdAt": "2025-04-24"
+        },
+        {
+            "id": "132",
+            "regNo": "SLU/EDU/032",
+            "password": "$2b$12$XsR5dcNwCRySlM/o0BDBD.MhDrKDm0Mu3D3X59SnzG46lVqlX5lkW",
+            "email": "trainee32@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee32",
+            "surname": "Student32",
+            "phone": "123-456-0132",
+            "address": "Trainee Address 32",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 92,
+            "img": "",
+            "createdAt": "2025-04-25"
+        },
+        {
+            "id": "133",
+            "regNo": "SLU/EDU/033",
+            "password": "$2b$12$aLngl0QxbUllfPUZOTyEpeLws.6Ib8rRwaeLdLRxVuUCX5BcsHa6q",
+            "email": "trainee33@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee33",
+            "surname": "Student33",
+            "phone": "123-456-0133",
+            "address": "Trainee Address 33",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 93,
+            "img": "",
+            "createdAt": "2025-04-26"
+        },
+        {
+            "id": "134",
+            "regNo": "SLU/EDU/034",
+            "password": "$2b$12$0.GZm4hFTM6tp3Xg/Ft6zuXUXNGPSj.Me6ULYzqFXY8kvQgeZsY4e",
+            "email": "trainee34@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee34",
+            "surname": "Student34",
+            "phone": "123-456-0134",
+            "address": "Trainee Address 34",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 94,
+            "img": "",
+            "createdAt": "2025-04-27"
+        },
+        {
+            "id": "135",
+            "regNo": "SLU/EDU/035",
+            "password": "$2b$12$y/A.Ks8TWbfKBDE9UWmGJezZ8nf03Cd63tmisG7fHjvTRKfCuz8jm",
+            "email": "trainee35@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee35",
+            "surname": "Student35",
+            "phone": "123-456-0135",
+            "address": "Trainee Address 35",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 95,
+            "img": "",
+            "createdAt": "2025-04-28"
+        },
+        {
+            "id": "136",
+            "regNo": "SLU/EDU/036",
+            "password": "$2b$12$uCkJmbqlE9y.KhZvSKdHWeFyakxKZeCuYzl5CmKXY2LPU.2yJPPqq",
+            "email": "trainee36@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee36",
+            "surname": "Student36",
+            "phone": "123-456-0136",
+            "address": "Trainee Address 36",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 96,
+            "img": "",
+            "createdAt": "2025-04-29"
+        },
+        {
+            "id": "137",
+            "regNo": "SLU/EDU/037",
+            "password": "$2b$12$wXeZL5C1tEQLwKIov8mjr.Er1.7R2IyaLOP66.JYCwYBn/iM57fyq",
+            "email": "trainee37@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee37",
+            "surname": "Student37",
+            "phone": "123-456-0137",
+            "address": "Trainee Address 37",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 97,
+            "img": "",
+            "createdAt": "2025-04-30"
+        },
+        {
+            "id": "138",
+            "regNo": "SLU/EDU/038",
+            "password": "$2b$12$UVlHaRZwstt2r16Yk.aDyuYMkJCZl1Li6VemHkDlfe.VYrjyT7zQ.",
+            "email": "trainee38@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee38",
+            "surname": "Student38",
+            "phone": "123-456-0138",
+            "address": "Trainee Address 38",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 98,
+            "img": "",
+            "createdAt": "2025-05-01"
+        },
+        {
+            "id": "139",
+            "regNo": "SLU/EDU/039",
+            "password": "$2b$12$JTkw0Ri2g1gvw4NLvLyPtulsAz8/AkTvHURVX3Ay7iI2ktek4iTtu",
+            "email": "trainee39@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee39",
+            "surname": "Student39",
+            "phone": "123-456-0139",
+            "address": "Trainee Address 39",
+            "bloodType": "B+",
+            "sex": "FEMALE",
+            "birthday": "1995-05-15",
+            "progress": 99,
+            "img": "",
+            "createdAt": "2025-05-02"
+        },
+        {
+            "id": "140",
+            "regNo": "SLU/EDU/040",
+            "password": "$2b$12$T/WXNtMsznuvvnUd0DPHZODbY7Qx9afbplpKAH0Fnk5mS5AfGnHRm",
+            "email": "trainee40@example.com",
+            "role": "teacherTrainee",
+            "name": "Trainee40",
+            "surname": "Student40",
+            "phone": "123-456-0140",
+            "address": "Trainee Address 40",
+            "bloodType": "A+",
+            "sex": "MALE",
+            "birthday": "1995-05-15",
+            "progress": 80,
+            "img": "",
+            "createdAt": "2025-05-03"
+        }
+    ],
+    "schools": [
+        {
+            "id": "school1",
+            "name": "School A",
+            "address": "123 School St",
+            "email": "schoola@example.com",
+            "phone": "123-456-7891",
+            "type": "PRIMARY",
+            "principal": "Principal A",
+            "logo": "",
+            "createdAt": "2024-10-16"
+        },
+        {
+            "id": "school2",
+            "name": "School B",
+            "address": "246 School St",
+            "email": "schoolb@example.com",
+            "phone": "123-456-7892",
+            "type": "SECONDARY",
+            "principal": "Principal B",
+            "logo": "",
+            "createdAt": "2024-10-17"
+        },
+        {
+            "id": "school3",
+            "name": "School C",
+            "address": "369 School St",
+            "email": "schoolc@example.com",
+            "phone": "123-456-7893",
+            "type": "TERTIARY",
+            "principal": "Principal C",
+            "logo": "",
+            "createdAt": "2024-10-18"
+        },
+        {
+            "id": "school4",
+            "name": "School D",
+            "address": "492 School St",
+            "email": "schoold@example.com",
+            "phone": "123-456-7894",
+            "type": "PRIMARY",
+            "principal": "Principal D",
+            "logo": "",
+            "createdAt": "2024-10-19"
+        },
+        {
+            "id": "school5",
+            "name": "School E",
+            "address": "615 School St",
+            "email": "schoole@example.com",
+            "phone": "123-456-7895",
+            "type": "SECONDARY",
+            "principal": "Principal E",
+            "logo": "",
+            "createdAt": "2024-10-20"
+        },
+        {
+            "id": "school6",
+            "name": "School F",
+            "address": "738 School St",
+            "email": "schoolf@example.com",
+            "phone": "123-456-7896",
+            "type": "TERTIARY",
+            "principal": "Principal F",
+            "logo": "",
+            "createdAt": "2024-10-21"
+        },
+        {
+            "id": "school7",
+            "name": "School G",
+            "address": "861 School St",
+            "email": "schoolg@example.com",
+            "phone": "123-456-7897",
+            "type": "PRIMARY",
+            "principal": "Principal G",
+            "logo": "",
+            "createdAt": "2024-10-22"
+        },
+        {
+            "id": "school8",
+            "name": "School H",
+            "address": "984 School St",
+            "email": "schoolh@example.com",
+            "phone": "123-456-7898",
+            "type": "SECONDARY",
+            "principal": "Principal H",
+            "logo": "",
+            "createdAt": "2024-10-23"
+        }
+    ],
+    "tp_assignments": [
+        {
+            "id": "tp1",
+            "traineeId": "101",
+            "supervisorId": "2",
+            "schoolId": "school2",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp2",
+            "traineeId": "102",
+            "supervisorId": "3",
+            "schoolId": "school3",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp3",
+            "traineeId": "103",
+            "supervisorId": "4",
+            "schoolId": "school4",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp4",
+            "traineeId": "104",
+            "supervisorId": "5",
+            "schoolId": "school5",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp5",
+            "traineeId": "105",
+            "supervisorId": "6",
+            "schoolId": "school6",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp6",
+            "traineeId": "106",
+            "supervisorId": "7",
+            "schoolId": "school7",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp7",
+            "traineeId": "107",
+            "supervisorId": "8",
+            "schoolId": "school8",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp8",
+            "traineeId": "108",
+            "supervisorId": "9",
+            "schoolId": "school1",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp9",
+            "traineeId": "109",
+            "supervisorId": "10",
+            "schoolId": "school2",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp10",
+            "traineeId": "110",
+            "supervisorId": "1",
+            "schoolId": "school3",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp11",
+            "traineeId": "111",
+            "supervisorId": "2",
+            "schoolId": "school4",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp12",
+            "traineeId": "112",
+            "supervisorId": "3",
+            "schoolId": "school5",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp13",
+            "traineeId": "113",
+            "supervisorId": "4",
+            "schoolId": "school6",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp14",
+            "traineeId": "114",
+            "supervisorId": "5",
+            "schoolId": "school7",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp15",
+            "traineeId": "115",
+            "supervisorId": "6",
+            "schoolId": "school8",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp16",
+            "traineeId": "116",
+            "supervisorId": "7",
+            "schoolId": "school1",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp17",
+            "traineeId": "117",
+            "supervisorId": "8",
+            "schoolId": "school2",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp18",
+            "traineeId": "118",
+            "supervisorId": "9",
+            "schoolId": "school3",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp19",
+            "traineeId": "119",
+            "supervisorId": "10",
+            "schoolId": "school4",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp20",
+            "traineeId": "120",
+            "supervisorId": "1",
+            "schoolId": "school5",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp21",
+            "traineeId": "121",
+            "supervisorId": "2",
+            "schoolId": "school6",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp22",
+            "traineeId": "122",
+            "supervisorId": "3",
+            "schoolId": "school7",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp23",
+            "traineeId": "123",
+            "supervisorId": "4",
+            "schoolId": "school8",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp24",
+            "traineeId": "124",
+            "supervisorId": "5",
+            "schoolId": "school1",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp25",
+            "traineeId": "125",
+            "supervisorId": "6",
+            "schoolId": "school2",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp26",
+            "traineeId": "126",
+            "supervisorId": "7",
+            "schoolId": "school3",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp27",
+            "traineeId": "127",
+            "supervisorId": "8",
+            "schoolId": "school4",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp28",
+            "traineeId": "128",
+            "supervisorId": "9",
+            "schoolId": "school5",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp29",
+            "traineeId": "129",
+            "supervisorId": "10",
+            "schoolId": "school6",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp30",
+            "traineeId": "130",
+            "supervisorId": "1",
+            "schoolId": "school7",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp31",
+            "traineeId": "131",
+            "supervisorId": "2",
+            "schoolId": "school8",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp32",
+            "traineeId": "132",
+            "supervisorId": "3",
+            "schoolId": "school1",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp33",
+            "traineeId": "133",
+            "supervisorId": "4",
+            "schoolId": "school2",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp34",
+            "traineeId": "134",
+            "supervisorId": "5",
+            "schoolId": "school3",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp35",
+            "traineeId": "135",
+            "supervisorId": "6",
+            "schoolId": "school4",
+            "startDate": "",
+            "endDate": ""
+        },
+        {
+            "id": "tp36",
+            "traineeId": "136",
+            "supervisorId": "7",
+            "schoolId": "school5",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp37",
+            "traineeId": "137",
+            "supervisorId": "8",
+            "schoolId": "school6",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp38",
+            "traineeId": "138",
+            "supervisorId": "9",
+            "schoolId": "school7",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp39",
+            "traineeId": "139",
+            "supervisorId": "10",
+            "schoolId": "school8",
+            "startDate": "2025-04-03",
+            "endDate": "2025-06-02"
+        },
+        {
+            "id": "tp40",
+            "traineeId": "140",
+            "supervisorId": "1",
+            "schoolId": "school1",
+            "startDate": "",
+            "endDate": ""
+        }
+    ],
+    "evaluations": [
+        {
+            "id": "eval-1",
+            "supervisorId": "1",
+            "traineeId": "101",
+            "traineeName": "Trainee1 Student1",
+            "submittedAt": "2025-04-04",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-2",
+            "supervisorId": "2",
+            "traineeId": "102",
+            "traineeName": "Trainee2 Student2",
+            "submittedAt": "2025-04-05",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-3",
+            "supervisorId": "3",
+            "traineeId": "103",
+            "traineeName": "Trainee3 Student3",
+            "submittedAt": "2025-04-06",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-4",
+            "supervisorId": "4",
+            "traineeId": "104",
+            "traineeName": "Trainee4 Student4",
+            "submittedAt": "2025-04-07",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-5",
+            "supervisorId": "5",
+            "traineeId": "105",
+            "traineeName": "Trainee5 Student5",
+            "submittedAt": "2025-04-08",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-6",
+            "supervisorId": "6",
+            "traineeId": "106",
+            "traineeName": "Trainee6 Student6",
+            "submittedAt": "2025-04-09",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-7",
+            "supervisorId": "7",
+            "traineeId": "107",
+            "traineeName": "Trainee7 Student7",
+            "submittedAt": "2025-04-10",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-8",
+            "supervisorId": "8",
+            "traineeId": "108",
+            "traineeName": "Trainee8 Student8",
+            "submittedAt": "2025-04-11",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-9",
+            "supervisorId": "9",
+            "traineeId": "109",
+            "traineeName": "Trainee9 Student9",
+            "submittedAt": "2025-04-12",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-10",
+            "supervisorId": "10",
+            "traineeId": "110",
+            "traineeName": "Trainee10 Student10",
+            "submittedAt": "2025-04-13",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-11",
+            "supervisorId": "1",
+            "traineeId": "111",
+            "traineeName": "Trainee11 Student11",
+            "submittedAt": "2025-04-14",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-12",
+            "supervisorId": "2",
+            "traineeId": "112",
+            "traineeName": "Trainee12 Student12",
+            "submittedAt": "2025-04-15",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-13",
+            "supervisorId": "3",
+            "traineeId": "113",
+            "traineeName": "Trainee13 Student13",
+            "submittedAt": "2025-04-16",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-14",
+            "supervisorId": "4",
+            "traineeId": "114",
+            "traineeName": "Trainee14 Student14",
+            "submittedAt": "2025-04-17",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-15",
+            "supervisorId": "5",
+            "traineeId": "115",
+            "traineeName": "Trainee15 Student15",
+            "submittedAt": "2025-04-18",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-16",
+            "supervisorId": "6",
+            "traineeId": "116",
+            "traineeName": "Trainee16 Student16",
+            "submittedAt": "2025-04-19",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-17",
+            "supervisorId": "7",
+            "traineeId": "117",
+            "traineeName": "Trainee17 Student17",
+            "submittedAt": "2025-04-20",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-18",
+            "supervisorId": "8",
+            "traineeId": "118",
+            "traineeName": "Trainee18 Student18",
+            "submittedAt": "2025-04-21",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-19",
+            "supervisorId": "9",
+            "traineeId": "119",
+            "traineeName": "Trainee19 Student19",
+            "submittedAt": "2025-04-22",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-20",
+            "supervisorId": "10",
+            "traineeId": "120",
+            "traineeName": "Trainee20 Student20",
+            "submittedAt": "2025-04-23",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-21",
+            "supervisorId": "1",
+            "traineeId": "121",
+            "traineeName": "Trainee21 Student21",
+            "submittedAt": "2025-04-24",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-22",
+            "supervisorId": "2",
+            "traineeId": "122",
+            "traineeName": "Trainee22 Student22",
+            "submittedAt": "2025-04-25",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-23",
+            "supervisorId": "3",
+            "traineeId": "123",
+            "traineeName": "Trainee23 Student23",
+            "submittedAt": "2025-04-26",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-24",
+            "supervisorId": "4",
+            "traineeId": "124",
+            "traineeName": "Trainee24 Student24",
+            "submittedAt": "2025-04-27",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-25",
+            "supervisorId": "5",
+            "traineeId": "125",
+            "traineeName": "Trainee25 Student25",
+            "submittedAt": "2025-04-28",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-26",
+            "supervisorId": "6",
+            "traineeId": "126",
+            "traineeName": "Trainee26 Student26",
+            "submittedAt": "2025-04-29",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-27",
+            "supervisorId": "7",
+            "traineeId": "127",
+            "traineeName": "Trainee27 Student27",
+            "submittedAt": "2025-04-30",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-28",
+            "supervisorId": "8",
+            "traineeId": "128",
+            "traineeName": "Trainee28 Student28",
+            "submittedAt": "2025-05-01",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-29",
+            "supervisorId": "9",
+            "traineeId": "129",
+            "traineeName": "Trainee29 Student29",
+            "submittedAt": "2025-05-02",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-30",
+            "supervisorId": "10",
+            "traineeId": "130",
+            "traineeName": "Trainee30 Student30",
+            "submittedAt": "2025-04-03",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-31",
+            "supervisorId": "1",
+            "traineeId": "131",
+            "traineeName": "Trainee31 Student31",
+            "submittedAt": "2025-04-04",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-32",
+            "supervisorId": "2",
+            "traineeId": "132",
+            "traineeName": "Trainee32 Student32",
+            "submittedAt": "2025-04-05",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-33",
+            "supervisorId": "3",
+            "traineeId": "133",
+            "traineeName": "Trainee33 Student33",
+            "submittedAt": "2025-04-06",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-34",
+            "supervisorId": "4",
+            "traineeId": "134",
+            "traineeName": "Trainee34 Student34",
+            "submittedAt": "2025-04-07",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-35",
+            "supervisorId": "5",
+            "traineeId": "135",
+            "traineeName": "Trainee35 Student35",
+            "submittedAt": "2025-04-08",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-36",
+            "supervisorId": "6",
+            "traineeId": "136",
+            "traineeName": "Trainee36 Student36",
+            "submittedAt": "2025-04-09",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-37",
+            "supervisorId": "7",
+            "traineeId": "137",
+            "traineeName": "Trainee37 Student37",
+            "submittedAt": "2025-04-10",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-38",
+            "supervisorId": "8",
+            "traineeId": "138",
+            "traineeName": "Trainee38 Student38",
+            "submittedAt": "2025-04-11",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 9,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        },
+        {
+            "id": "eval-39",
+            "supervisorId": "9",
+            "traineeId": "139",
+            "traineeName": "Trainee39 Student39",
+            "submittedAt": "2025-04-12",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 9,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 7,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 9,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 9
+            }
+        },
+        {
+            "id": "eval-40",
+            "supervisorId": "10",
+            "traineeId": "140",
+            "traineeName": "Trainee40 Student40",
+            "submittedAt": "2025-04-13",
+            "formData": {
+                "lessonPlanning": {
+                    "score": 8,
+                    "comments": "Good planning"
+                },
+                "teachingDelivery": {
+                    "score": 8,
+                    "comments": "Clear delivery"
+                },
+                "classroomManagement": {
+                    "score": 8,
+                    "comments": "Effective control"
+                },
+                "assessmentFeedback": {
+                    "score": 8,
+                    "comments": "Timely feedback"
+                },
+                "professionalism": {
+                    "score": 9,
+                    "comments": "Professional conduct"
+                },
+                "overallScore": 8
+            }
+        }
+    ],
+    "observations": [
+        {
+            "id": "obs1",
+            "traineeId": "101",
+            "supervisorId": "1",
+            "score": 8,
+            "comments": "Observation 1: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-25",
+            "completed_at": "2025-03-25"
+        },
+        {
+            "id": "obs2",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "score": 9,
+            "comments": "Observation 2: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-26",
+            "completed_at": "2025-03-26"
+        },
+        {
+            "id": "obs3",
+            "traineeId": "103",
+            "supervisorId": "3",
+            "score": 7,
+            "comments": "Observation 3: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-27",
+            "completed_at": "2025-03-27"
+        },
+        {
+            "id": "obs4",
+            "traineeId": "104",
+            "supervisorId": "4",
+            "score": 8,
+            "comments": "Observation 4: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-28",
+            "completed_at": "2025-03-28"
+        },
+        {
+            "id": "obs5",
+            "traineeId": "105",
+            "supervisorId": "5",
+            "score": 9,
+            "comments": "Observation 5: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-29",
+            "completed_at": "2025-03-29"
+        },
+        {
+            "id": "obs6",
+            "traineeId": "106",
+            "supervisorId": "6",
+            "score": 7,
+            "comments": "Observation 6: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-30",
+            "completed_at": "2025-03-30"
+        },
+        {
+            "id": "obs7",
+            "traineeId": "107",
+            "supervisorId": "7",
+            "score": 8,
+            "comments": "Observation 7: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-03-31",
+            "completed_at": "2025-03-31"
+        },
+        {
+            "id": "obs8",
+            "traineeId": "108",
+            "supervisorId": "8",
+            "score": 9,
+            "comments": "Observation 8: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-01",
+            "completed_at": "2025-04-01"
+        },
+        {
+            "id": "obs9",
+            "traineeId": "109",
+            "supervisorId": "9",
+            "score": 7,
+            "comments": "Observation 9: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-02",
+            "completed_at": "2025-04-02"
+        },
+        {
+            "id": "obs10",
+            "traineeId": "110",
+            "supervisorId": "10",
+            "score": 8,
+            "comments": "Observation 10: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-03",
+            "completed_at": "2025-04-03"
+        },
+        {
+            "id": "obs11",
+            "traineeId": "111",
+            "supervisorId": "1",
+            "score": 9,
+            "comments": "Observation 11: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-04",
+            "completed_at": "2025-04-04"
+        },
+        {
+            "id": "obs12",
+            "traineeId": "112",
+            "supervisorId": "2",
+            "score": 7,
+            "comments": "Observation 12: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-05",
+            "completed_at": "2025-04-05"
+        },
+        {
+            "id": "obs13",
+            "traineeId": "113",
+            "supervisorId": "3",
+            "score": 8,
+            "comments": "Observation 13: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-06",
+            "completed_at": "2025-04-06"
+        },
+        {
+            "id": "obs14",
+            "traineeId": "114",
+            "supervisorId": "4",
+            "score": 9,
+            "comments": "Observation 14: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-07",
+            "completed_at": "2025-04-07"
+        },
+        {
+            "id": "obs15",
+            "traineeId": "115",
+            "supervisorId": "5",
+            "score": 7,
+            "comments": "Observation 15: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-08",
+            "completed_at": "2025-04-08"
+        },
+        {
+            "id": "obs16",
+            "traineeId": "116",
+            "supervisorId": "6",
+            "score": 8,
+            "comments": "Observation 16: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-09",
+            "completed_at": "2025-04-09"
+        },
+        {
+            "id": "obs17",
+            "traineeId": "117",
+            "supervisorId": "7",
+            "score": 9,
+            "comments": "Observation 17: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-10",
+            "completed_at": "2025-04-10"
+        },
+        {
+            "id": "obs18",
+            "traineeId": "118",
+            "supervisorId": "8",
+            "score": 7,
+            "comments": "Observation 18: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-11",
+            "completed_at": "2025-04-11"
+        },
+        {
+            "id": "obs19",
+            "traineeId": "119",
+            "supervisorId": "9",
+            "score": 8,
+            "comments": "Observation 19: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-12",
+            "completed_at": "2025-04-12"
+        },
+        {
+            "id": "obs20",
+            "traineeId": "120",
+            "supervisorId": "10",
+            "score": 9,
+            "comments": "Observation 20: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-13",
+            "completed_at": "2025-04-13"
+        },
+        {
+            "id": "obs21",
+            "traineeId": "121",
+            "supervisorId": "1",
+            "score": 7,
+            "comments": "Observation 21: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-14",
+            "completed_at": "2025-04-14"
+        },
+        {
+            "id": "obs22",
+            "traineeId": "122",
+            "supervisorId": "2",
+            "score": 8,
+            "comments": "Observation 22: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-15",
+            "completed_at": "2025-04-15"
+        },
+        {
+            "id": "obs23",
+            "traineeId": "123",
+            "supervisorId": "3",
+            "score": 9,
+            "comments": "Observation 23: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-16",
+            "completed_at": "2025-04-16"
+        },
+        {
+            "id": "obs24",
+            "traineeId": "124",
+            "supervisorId": "4",
+            "score": 7,
+            "comments": "Observation 24: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-17",
+            "completed_at": "2025-04-17"
+        },
+        {
+            "id": "obs25",
+            "traineeId": "125",
+            "supervisorId": "5",
+            "score": 8,
+            "comments": "Observation 25: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-18",
+            "completed_at": "2025-04-18"
+        },
+        {
+            "id": "obs26",
+            "traineeId": "126",
+            "supervisorId": "6",
+            "score": 9,
+            "comments": "Observation 26: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-19",
+            "completed_at": "2025-04-19"
+        },
+        {
+            "id": "obs27",
+            "traineeId": "127",
+            "supervisorId": "7",
+            "score": 7,
+            "comments": "Observation 27: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-20",
+            "completed_at": "2025-04-20"
+        },
+        {
+            "id": "obs28",
+            "traineeId": "128",
+            "supervisorId": "8",
+            "score": 8,
+            "comments": "Observation 28: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-21",
+            "completed_at": "2025-04-21"
+        },
+        {
+            "id": "obs29",
+            "traineeId": "129",
+            "supervisorId": "9",
+            "score": 9,
+            "comments": "Observation 29: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-22",
+            "completed_at": "2025-04-22"
+        },
+        {
+            "id": "obs30",
+            "traineeId": "130",
+            "supervisorId": "10",
+            "score": 7,
+            "comments": "Observation 30: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-23",
+            "completed_at": "2025-04-23"
+        },
+        {
+            "id": "obs31",
+            "traineeId": "131",
+            "supervisorId": "1",
+            "score": 8,
+            "comments": "Observation 31: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-24",
+            "completed_at": "2025-04-24"
+        },
+        {
+            "id": "obs32",
+            "traineeId": "132",
+            "supervisorId": "2",
+            "score": 9,
+            "comments": "Observation 32: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-25",
+            "completed_at": "2025-04-25"
+        },
+        {
+            "id": "obs33",
+            "traineeId": "133",
+            "supervisorId": "3",
+            "score": 7,
+            "comments": "Observation 33: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-26",
+            "completed_at": "2025-04-26"
+        },
+        {
+            "id": "obs34",
+            "traineeId": "134",
+            "supervisorId": "4",
+            "score": 8,
+            "comments": "Observation 34: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-27",
+            "completed_at": "2025-04-27"
+        },
+        {
+            "id": "obs35",
+            "traineeId": "135",
+            "supervisorId": "5",
+            "score": 9,
+            "comments": "Observation 35: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-28",
+            "completed_at": "2025-04-28"
+        },
+        {
+            "id": "obs36",
+            "traineeId": "136",
+            "supervisorId": "6",
+            "score": 7,
+            "comments": "Observation 36: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-29",
+            "completed_at": "2025-04-29"
+        },
+        {
+            "id": "obs37",
+            "traineeId": "137",
+            "supervisorId": "7",
+            "score": 8,
+            "comments": "Observation 37: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-04-30",
+            "completed_at": "2025-04-30"
+        },
+        {
+            "id": "obs38",
+            "traineeId": "138",
+            "supervisorId": "8",
+            "score": 9,
+            "comments": "Observation 38: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-05-01",
+            "completed_at": "2025-05-01"
+        },
+        {
+            "id": "obs39",
+            "traineeId": "139",
+            "supervisorId": "9",
+            "score": 7,
+            "comments": "Observation 39: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-05-02",
+            "completed_at": "2025-05-02"
+        },
+        {
+            "id": "obs40",
+            "traineeId": "140",
+            "supervisorId": "10",
+            "score": 8,
+            "comments": "Observation 40: Good performance",
+            "status": "completed",
+            "scheduled_at": "2025-05-03",
+            "completed_at": "2025-05-03"
+        }
+    ],
+    "supervisor_schedule": [
+        {
+            "id": "sch1",
+            "supervisorId": "1",
+            "traineeId": "101",
+            "lesson_plan_id": "lp2",
+            "date": "2025-05-04",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch2",
+            "supervisorId": "2",
+            "traineeId": "102",
+            "lesson_plan_id": "lp3",
+            "date": "2025-05-05",
+            "start_time": "09:00:00",
+            "end_time": "10:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch3",
+            "supervisorId": "3",
+            "traineeId": "103",
+            "lesson_plan_id": "lp1",
+            "date": "2025-05-06",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch4",
+            "supervisorId": "4",
+            "traineeId": "104",
+            "lesson_plan_id": "lp2",
+            "date": "2025-05-07",
+            "start_time": "09:00:00",
+            "end_time": "10:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch5",
+            "supervisorId": "5",
+            "traineeId": "105",
+            "lesson_plan_id": "lp3",
+            "date": "2025-05-08",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch6",
+            "supervisorId": "6",
+            "traineeId": "106",
+            "lesson_plan_id": "lp1",
+            "date": "2025-05-09",
+            "start_time": "09:00:00",
+            "end_time": "10:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch7",
+            "supervisorId": "7",
+            "traineeId": "107",
+            "lesson_plan_id": "lp2",
+            "date": "2025-05-10",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch8",
+            "supervisorId": "8",
+            "traineeId": "108",
+            "lesson_plan_id": "lp3",
+            "date": "2025-05-11",
+            "start_time": "09:00:00",
+            "end_time": "10:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28",
+            "lessonPlanTitle": "Unknown Lesson Plan",
+            "traineeName": "Trainee8 Student8"
+        },
+        {
+            "id": "sch9",
+            "supervisorId": "9",
+            "traineeId": "109",
+            "lesson_plan_id": "lp1",
+            "date": "2025-05-12",
+            "start_time": "10:00:00",
+            "end_time": "11:00:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "sch50be9e79-a886-4a40-9d04-a51a4b16d687",
+            "supervisorId": "8",
+            "traineeId": "117",
+            "lesson_plan_id": "lp7b50d5ca-96a2-48c7-8c4a-307638c26767",
+            "date": "2025-04-25",
+            "start_time": "10:00",
+            "end_time": "11:00",
+            "status": "SCHEDULED",
+            "created_at": "2025-05-03",
+            "lessonPlanTitle": "Electricity",
+            "traineeName": "Trainee17 Student17"
+        }
+    ],
+    "observation_feedback": [
+        {
+            "id": "ofb1",
+            "lesson_plan_id": "lp2",
+            "traineeId": "101",
+            "supervisorId": "1",
+            "score": 8,
+            "comments": "Feedback for lesson plan lp2: Good engagement",
+            "created_at": "2025-04-24"
+        },
+        {
+            "id": "ofb2",
+            "lesson_plan_id": "lp3",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "score": 9,
+            "comments": "Feedback for lesson plan lp3: Good engagement",
+            "created_at": "2025-04-25"
+        },
+        {
+            "id": "ofb3",
+            "lesson_plan_id": "lp1",
+            "traineeId": "103",
+            "supervisorId": "3",
+            "score": 7,
+            "comments": "Feedback for lesson plan lp1: Good engagement",
+            "created_at": "2025-04-26"
+        },
+        {
+            "id": "ofb4",
+            "lesson_plan_id": "lp2",
+            "traineeId": "104",
+            "supervisorId": "4",
+            "score": 8,
+            "comments": "Feedback for lesson plan lp2: Good engagement",
+            "created_at": "2025-04-27"
+        },
+        {
+            "id": "ofb5",
+            "lesson_plan_id": "lp3",
+            "traineeId": "105",
+            "supervisorId": "5",
+            "score": 9,
+            "comments": "Feedback for lesson plan lp3: Good engagement",
+            "created_at": "2025-04-28"
+        },
+        {
+            "id": "ofb6",
+            "lesson_plan_id": "lp1",
+            "traineeId": "106",
+            "supervisorId": "6",
+            "score": 7,
+            "comments": "Feedback for lesson plan lp1: Good engagement",
+            "created_at": "2025-04-29"
+        },
+        {
+            "id": "ofb7",
+            "lesson_plan_id": "lp2",
+            "traineeId": "107",
+            "supervisorId": "7",
+            "score": 8,
+            "comments": "Feedback for lesson plan lp2: Good engagement",
+            "created_at": "2025-04-30"
+        },
+        {
+            "id": "ofb8",
+            "lesson_plan_id": "lp3",
+            "traineeId": "108",
+            "supervisorId": "8",
+            "score": 9,
+            "comments": "Feedback for lesson plan lp3: Good engagement",
+            "created_at": "2025-05-01"
+        },
+        {
+            "id": "ofb9",
+            "lesson_plan_id": "lp1",
+            "traineeId": "109",
+            "supervisorId": "9",
+            "score": 7,
+            "comments": "Feedback for lesson plan lp1: Good engagement",
+            "created_at": "2025-05-02"
+        },
+        {
+            "id": "ofb10",
+            "lesson_plan_id": "lp7b50d5ca-96a2-48c7-8c4a-307638c26767",
+            "traineeId": "117",
+            "supervisorId": "8",
+            "score": null,
+            "comments": "Approved with scheduled observation",
+            "created_at": "2025-05-03"
+        }
+    ],
+    "notifications": [
+        {
+            "id": "notif-1",
+            "user_id": "3",
+            "initiator_id": "102",
+            "event_id": null,
+            "type": "ASSIGNMENT",
+            "priority": "MEDIUM",
+            "message": "You are assigned to Supervisor Supervisor1 Last1 at School A.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-2",
+            "user_id": "4",
+            "initiator_id": "101",
+            "event_id": "3",
+            "type": "EVENT",
+            "priority": "LOW",
+            "message": "Join TP Review Meeting on 2025-04-17 at School B.",
+            "created_at": "2025-04-23T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-3",
+            "user_id": "5",
+            "initiator_id": "1",
+            "event_id": "4",
+            "type": "LESSON_PLAN",
+            "priority": "HIGH",
+            "message": "New lesson plan submitted by Trainee2 Student2 for Math at School C.",
+            "created_at": "2025-04-24T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-4",
+            "user_id": "6",
+            "initiator_id": "101",
+            "event_id": "lp2",
+            "type": "EVALUATION",
+            "priority": "MEDIUM",
+            "message": "Your TP evaluation for School D is due on 2025-04-20.",
+            "created_at": "2025-04-25T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-5",
+            "user_id": "7",
+            "initiator_id": "102",
+            "event_id": null,
+            "type": "ASSIGNMENT",
+            "priority": "LOW",
+            "message": "You are assigned to Supervisor Supervisor1 Last1 at School E.",
+            "created_at": "2025-04-26T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-6",
+            "user_id": "2",
+            "initiator_id": "1",
+            "event_id": "1",
+            "type": "EVENT",
+            "priority": "HIGH",
+            "message": "Join TP Review Meeting on 2025-04-16 at School F.",
+            "created_at": "2025-04-27T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-7",
+            "user_id": "102",
+            "initiator_id": "102",
+            "event_id": "2",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "New lesson plan submitted by Trainee2 Student2 for Science at School G.",
+            "created_at": "2025-04-28T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-8",
+            "user_id": "101",
+            "initiator_id": "101",
+            "event_id": "lp3",
+            "type": "EVALUATION",
+            "priority": "LOW",
+            "message": "Your TP evaluation for School H is due on 2025-04-20.",
+            "created_at": "2025-04-29T00:00:00Z",
+            "read_status": true
+        },
+        {
+            "id": "notif-9",
+            "user_id": "102",
+            "initiator_id": "1",
+            "event_id": null,
+            "type": "ASSIGNMENT",
+            "priority": "HIGH",
+            "message": "You are assigned to Supervisor Supervisor1 Last1 at School A.",
+            "created_at": "2025-04-30T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch1",
+            "user_id": "1",
+            "initiator_id": "101",
+            "event_id": "lp2",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Science Lesson' by Trainee1 Student1 on 2025-04-28 at School A.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch2",
+            "user_id": "2",
+            "initiator_id": "102",
+            "event_id": "lp3",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'English Lesson' by Trainee2 Student2 on 2025-04-29 at School B.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch3",
+            "user_id": "3",
+            "initiator_id": "103",
+            "event_id": "lp1",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Math Lesson' by Trainee3 Student3 on 2025-04-30 at School C.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch4",
+            "user_id": "4",
+            "initiator_id": "104",
+            "event_id": "lp2",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Science Lesson' by Trainee4 Student4 on 2025-05-01 at School D.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch5",
+            "user_id": "5",
+            "initiator_id": "105",
+            "event_id": "lp3",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'English Lesson' by Trainee5 Student5 on 2025-05-02 at School E.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch6",
+            "user_id": "6",
+            "initiator_id": "106",
+            "event_id": "lp1",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Math Lesson' by Trainee6 Student6 on 2025-05-03 at School F.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch7",
+            "user_id": "7",
+            "initiator_id": "107",
+            "event_id": "lp2",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Science Lesson' by Trainee7 Student7 on 2025-05-04 at School G.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch8",
+            "user_id": "8",
+            "initiator_id": "108",
+            "event_id": "lp3",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'English Lesson' by Trainee8 Student8 on 2025-05-05 at School H.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-sch9",
+            "user_id": "9",
+            "initiator_id": "109",
+            "event_id": "lp1",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "Observation scheduled for lesson plan 'Math Lesson' by Trainee9 Student9 on 2025-05-06 at School A.",
+            "created_at": "2025-04-22T00:00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-b9e3bcfc-4096-460c-b4de-a75d1c03298d",
+            "user_id": "8",
+            "initiator_id": "117",
+            "type": "LESSON_PLAN",
+            "priority": "MEDIUM",
+            "message": "New lesson plan submitted by Trainee17 Student17 for Mathematics at School B.",
+            "created_at": "2025-05-03T19:34:43.729050+00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-6f32fdcd-2601-47e2-ab10-27a7783426c9",
+            "user_id": "117",
+            "initiator_id": "STAFF008",
+            "event_id": "lp7b50d5ca-96a2-48c7-8c4a-307638c26767",
+            "type": "LESSON_PLAN",
+            "priority": "HIGH",
+            "message": "Your lesson plan 'Electricity' has been approved by Supervisor8 Last8. Comments: Approved with scheduled observation",
+            "created_at": "2025-05-03T19:36:48.805287Z",
+            "read_status": false
+        }
+    ],
+    "feedback": [
+        {
+            "id": "fb1",
+            "traineeId": "101",
+            "supervisorId": "1",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 1: Improve engagement",
+            "timestamp": "2025-04-14"
+        },
+        {
+            "id": "fb2",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "category": "Classroom Management",
+            "feedback": "Feedback 2: Improve engagement",
+            "timestamp": "2025-04-15"
+        },
+        {
+            "id": "fb3",
+            "traineeId": "103",
+            "supervisorId": "3",
+            "category": "Delivery",
+            "feedback": "Feedback 3: Improve engagement",
+            "timestamp": "2025-04-16"
+        },
+        {
+            "id": "fb4",
+            "traineeId": "104",
+            "supervisorId": "4",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 4: Improve engagement",
+            "timestamp": "2025-04-17"
+        },
+        {
+            "id": "fb5",
+            "traineeId": "105",
+            "supervisorId": "5",
+            "category": "Classroom Management",
+            "feedback": "Feedback 5: Improve engagement",
+            "timestamp": "2025-04-18"
+        },
+        {
+            "id": "fb6",
+            "traineeId": "106",
+            "supervisorId": "6",
+            "category": "Delivery",
+            "feedback": "Feedback 6: Improve engagement",
+            "timestamp": "2025-04-19"
+        },
+        {
+            "id": "fb7",
+            "traineeId": "107",
+            "supervisorId": "7",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 7: Improve engagement",
+            "timestamp": "2025-04-20"
+        },
+        {
+            "id": "fb8",
+            "traineeId": "108",
+            "supervisorId": "8",
+            "category": "Classroom Management",
+            "feedback": "Feedback 8: Improve engagement",
+            "timestamp": "2025-04-21"
+        },
+        {
+            "id": "fb9",
+            "traineeId": "109",
+            "supervisorId": "9",
+            "category": "Delivery",
+            "feedback": "Feedback 9: Improve engagement",
+            "timestamp": "2025-04-22"
+        },
+        {
+            "id": "fb10",
+            "traineeId": "110",
+            "supervisorId": "10",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 10: Improve engagement",
+            "timestamp": "2025-04-23"
+        },
+        {
+            "id": "fb11",
+            "traineeId": "111",
+            "supervisorId": "1",
+            "category": "Classroom Management",
+            "feedback": "Feedback 11: Improve engagement",
+            "timestamp": "2025-04-24"
+        },
+        {
+            "id": "fb12",
+            "traineeId": "112",
+            "supervisorId": "2",
+            "category": "Delivery",
+            "feedback": "Feedback 12: Improve engagement",
+            "timestamp": "2025-04-25"
+        },
+        {
+            "id": "fb13",
+            "traineeId": "113",
+            "supervisorId": "3",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 13: Improve engagement",
+            "timestamp": "2025-04-26"
+        },
+        {
+            "id": "fb14",
+            "traineeId": "114",
+            "supervisorId": "4",
+            "category": "Classroom Management",
+            "feedback": "Feedback 14: Improve engagement",
+            "timestamp": "2025-04-27"
+        },
+        {
+            "id": "fb15",
+            "traineeId": "115",
+            "supervisorId": "5",
+            "category": "Delivery",
+            "feedback": "Feedback 15: Improve engagement",
+            "timestamp": "2025-04-28"
+        },
+        {
+            "id": "fb16",
+            "traineeId": "116",
+            "supervisorId": "6",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 16: Improve engagement",
+            "timestamp": "2025-04-29"
+        },
+        {
+            "id": "fb17",
+            "traineeId": "117",
+            "supervisorId": "7",
+            "category": "Classroom Management",
+            "feedback": "Feedback 17: Improve engagement",
+            "timestamp": "2025-04-30"
+        },
+        {
+            "id": "fb18",
+            "traineeId": "118",
+            "supervisorId": "8",
+            "category": "Delivery",
+            "feedback": "Feedback 18: Improve engagement",
+            "timestamp": "2025-05-01"
+        },
+        {
+            "id": "fb19",
+            "traineeId": "119",
+            "supervisorId": "9",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 19: Improve engagement",
+            "timestamp": "2025-05-02"
+        },
+        {
+            "id": "fb20",
+            "traineeId": "120",
+            "supervisorId": "10",
+            "category": "Classroom Management",
+            "feedback": "Feedback 20: Improve engagement",
+            "timestamp": "2025-05-03"
+        },
+        {
+            "id": "fb21",
+            "traineeId": "121",
+            "supervisorId": "1",
+            "category": "Delivery",
+            "feedback": "Feedback 21: Improve engagement",
+            "timestamp": "2025-05-04"
+        },
+        {
+            "id": "fb22",
+            "traineeId": "122",
+            "supervisorId": "2",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 22: Improve engagement",
+            "timestamp": "2025-05-05"
+        },
+        {
+            "id": "fb23",
+            "traineeId": "123",
+            "supervisorId": "3",
+            "category": "Classroom Management",
+            "feedback": "Feedback 23: Improve engagement",
+            "timestamp": "2025-05-06"
+        },
+        {
+            "id": "fb24",
+            "traineeId": "124",
+            "supervisorId": "4",
+            "category": "Delivery",
+            "feedback": "Feedback 24: Improve engagement",
+            "timestamp": "2025-05-07"
+        },
+        {
+            "id": "fb25",
+            "traineeId": "125",
+            "supervisorId": "5",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 25: Improve engagement",
+            "timestamp": "2025-05-08"
+        },
+        {
+            "id": "fb26",
+            "traineeId": "126",
+            "supervisorId": "6",
+            "category": "Classroom Management",
+            "feedback": "Feedback 26: Improve engagement",
+            "timestamp": "2025-05-09"
+        },
+        {
+            "id": "fb27",
+            "traineeId": "127",
+            "supervisorId": "7",
+            "category": "Delivery",
+            "feedback": "Feedback 27: Improve engagement",
+            "timestamp": "2025-05-10"
+        },
+        {
+            "id": "fb28",
+            "traineeId": "128",
+            "supervisorId": "8",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 28: Improve engagement",
+            "timestamp": "2025-05-11"
+        },
+        {
+            "id": "fb29",
+            "traineeId": "129",
+            "supervisorId": "9",
+            "category": "Classroom Management",
+            "feedback": "Feedback 29: Improve engagement",
+            "timestamp": "2025-05-12"
+        },
+        {
+            "id": "fb30",
+            "traineeId": "130",
+            "supervisorId": "10",
+            "category": "Delivery",
+            "feedback": "Feedback 30: Improve engagement",
+            "timestamp": "2025-05-13"
+        },
+        {
+            "id": "fb31",
+            "traineeId": "131",
+            "supervisorId": "1",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 31: Improve engagement",
+            "timestamp": "2025-05-14"
+        },
+        {
+            "id": "fb32",
+            "traineeId": "132",
+            "supervisorId": "2",
+            "category": "Classroom Management",
+            "feedback": "Feedback 32: Improve engagement",
+            "timestamp": "2025-05-15"
+        },
+        {
+            "id": "fb33",
+            "traineeId": "133",
+            "supervisorId": "3",
+            "category": "Delivery",
+            "feedback": "Feedback 33: Improve engagement",
+            "timestamp": "2025-05-16"
+        },
+        {
+            "id": "fb34",
+            "traineeId": "134",
+            "supervisorId": "4",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 34: Improve engagement",
+            "timestamp": "2025-05-17"
+        },
+        {
+            "id": "fb35",
+            "traineeId": "135",
+            "supervisorId": "5",
+            "category": "Classroom Management",
+            "feedback": "Feedback 35: Improve engagement",
+            "timestamp": "2025-05-18"
+        },
+        {
+            "id": "fb36",
+            "traineeId": "136",
+            "supervisorId": "6",
+            "category": "Delivery",
+            "feedback": "Feedback 36: Improve engagement",
+            "timestamp": "2025-05-19"
+        },
+        {
+            "id": "fb37",
+            "traineeId": "137",
+            "supervisorId": "7",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 37: Improve engagement",
+            "timestamp": "2025-05-20"
+        },
+        {
+            "id": "fb38",
+            "traineeId": "138",
+            "supervisorId": "8",
+            "category": "Classroom Management",
+            "feedback": "Feedback 38: Improve engagement",
+            "timestamp": "2025-05-21"
+        },
+        {
+            "id": "fb39",
+            "traineeId": "139",
+            "supervisorId": "9",
+            "category": "Delivery",
+            "feedback": "Feedback 39: Improve engagement",
+            "timestamp": "2025-05-22"
+        },
+        {
+            "id": "fb40",
+            "traineeId": "140",
+            "supervisorId": "10",
+            "category": "Lesson Plan",
+            "feedback": "Feedback 40: Improve engagement",
+            "timestamp": "2025-05-23"
+        }
+    ],
+    "lessons": [
+        {
+            "id": "1",
+            "supervisorId": "1",
+            "className": "Class 2A",
+            "subject": "Physics",
+            "startTime": "2025-04-24",
+            "endTime": "2025-04-24"
+        },
+        {
+            "id": "2",
+            "supervisorId": "2",
+            "className": "Class 3A",
+            "subject": "Math",
+            "startTime": "2025-04-25",
+            "endTime": "2025-04-25"
+        },
+        {
+            "id": "3",
+            "supervisorId": "3",
+            "className": "Class 4A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-26",
+            "endTime": "2025-04-26"
+        },
+        {
+            "id": "4",
+            "supervisorId": "4",
+            "className": "Class 5A",
+            "subject": "Biology",
+            "startTime": "2025-04-27",
+            "endTime": "2025-04-27"
+        },
+        {
+            "id": "5",
+            "supervisorId": "5",
+            "className": "Class 1A",
+            "subject": "Physics",
+            "startTime": "2025-04-28",
+            "endTime": "2025-04-28"
+        },
+        {
+            "id": "6",
+            "supervisorId": "6",
+            "className": "Class 2A",
+            "subject": "Math",
+            "startTime": "2025-04-29",
+            "endTime": "2025-04-29"
+        },
+        {
+            "id": "7",
+            "supervisorId": "7",
+            "className": "Class 3A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-30",
+            "endTime": "2025-04-30"
+        },
+        {
+            "id": "8",
+            "supervisorId": "8",
+            "className": "Class 4A",
+            "subject": "Biology",
+            "startTime": "2025-05-01",
+            "endTime": "2025-05-01"
+        },
+        {
+            "id": "9",
+            "supervisorId": "9",
+            "className": "Class 5A",
+            "subject": "Physics",
+            "startTime": "2025-05-02",
+            "endTime": "2025-05-02"
+        },
+        {
+            "id": "10",
+            "supervisorId": "10",
+            "className": "Class 1A",
+            "subject": "Math",
+            "startTime": "2025-04-23",
+            "endTime": "2025-04-23"
+        },
+        {
+            "id": "11",
+            "supervisorId": "1",
+            "className": "Class 2A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-24",
+            "endTime": "2025-04-24"
+        },
+        {
+            "id": "12",
+            "supervisorId": "2",
+            "className": "Class 3A",
+            "subject": "Biology",
+            "startTime": "2025-04-25",
+            "endTime": "2025-04-25"
+        },
+        {
+            "id": "13",
+            "supervisorId": "3",
+            "className": "Class 4A",
+            "subject": "Physics",
+            "startTime": "2025-04-26",
+            "endTime": "2025-04-26"
+        },
+        {
+            "id": "14",
+            "supervisorId": "4",
+            "className": "Class 5A",
+            "subject": "Math",
+            "startTime": "2025-04-27",
+            "endTime": "2025-04-27"
+        },
+        {
+            "id": "15",
+            "supervisorId": "5",
+            "className": "Class 1A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-28",
+            "endTime": "2025-04-28"
+        },
+        {
+            "id": "16",
+            "supervisorId": "6",
+            "className": "Class 2A",
+            "subject": "Biology",
+            "startTime": "2025-04-29",
+            "endTime": "2025-04-29"
+        },
+        {
+            "id": "17",
+            "supervisorId": "7",
+            "className": "Class 3A",
+            "subject": "Physics",
+            "startTime": "2025-04-30",
+            "endTime": "2025-04-30"
+        },
+        {
+            "id": "18",
+            "supervisorId": "8",
+            "className": "Class 4A",
+            "subject": "Math",
+            "startTime": "2025-05-01",
+            "endTime": "2025-05-01"
+        },
+        {
+            "id": "19",
+            "supervisorId": "9",
+            "className": "Class 5A",
+            "subject": "Chemistry",
+            "startTime": "2025-05-02",
+            "endTime": "2025-05-02"
+        },
+        {
+            "id": "20",
+            "supervisorId": "10",
+            "className": "Class 1A",
+            "subject": "Biology",
+            "startTime": "2025-04-23",
+            "endTime": "2025-04-23"
+        },
+        {
+            "id": "21",
+            "supervisorId": "1",
+            "className": "Class 2A",
+            "subject": "Physics",
+            "startTime": "2025-04-24",
+            "endTime": "2025-04-24"
+        },
+        {
+            "id": "22",
+            "supervisorId": "2",
+            "className": "Class 3A",
+            "subject": "Math",
+            "startTime": "2025-04-25",
+            "endTime": "2025-04-25"
+        },
+        {
+            "id": "23",
+            "supervisorId": "3",
+            "className": "Class 4A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-26",
+            "endTime": "2025-04-26"
+        },
+        {
+            "id": "24",
+            "supervisorId": "4",
+            "className": "Class 5A",
+            "subject": "Biology",
+            "startTime": "2025-04-27",
+            "endTime": "2025-04-27"
+        },
+        {
+            "id": "25",
+            "supervisorId": "5",
+            "className": "Class 1A",
+            "subject": "Physics",
+            "startTime": "2025-04-28",
+            "endTime": "2025-04-28"
+        },
+        {
+            "id": "26",
+            "supervisorId": "6",
+            "className": "Class 2A",
+            "subject": "Math",
+            "startTime": "2025-04-29",
+            "endTime": "2025-04-29"
+        },
+        {
+            "id": "27",
+            "supervisorId": "7",
+            "className": "Class 3A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-30",
+            "endTime": "2025-04-30"
+        },
+        {
+            "id": "28",
+            "supervisorId": "8",
+            "className": "Class 4A",
+            "subject": "Biology",
+            "startTime": "2025-05-01",
+            "endTime": "2025-05-01"
+        },
+        {
+            "id": "29",
+            "supervisorId": "9",
+            "className": "Class 5A",
+            "subject": "Physics",
+            "startTime": "2025-05-02",
+            "endTime": "2025-05-02"
+        },
+        {
+            "id": "30",
+            "supervisorId": "10",
+            "className": "Class 1A",
+            "subject": "Math",
+            "startTime": "2025-04-23",
+            "endTime": "2025-04-23"
+        },
+        {
+            "id": "31",
+            "supervisorId": "1",
+            "className": "Class 2A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-24",
+            "endTime": "2025-04-24"
+        },
+        {
+            "id": "32",
+            "supervisorId": "2",
+            "className": "Class 3A",
+            "subject": "Biology",
+            "startTime": "2025-04-25",
+            "endTime": "2025-04-25"
+        },
+        {
+            "id": "33",
+            "supervisorId": "3",
+            "className": "Class 4A",
+            "subject": "Physics",
+            "startTime": "2025-04-26",
+            "endTime": "2025-04-26"
+        },
+        {
+            "id": "34",
+            "supervisorId": "4",
+            "className": "Class 5A",
+            "subject": "Math",
+            "startTime": "2025-04-27",
+            "endTime": "2025-04-27"
+        },
+        {
+            "id": "35",
+            "supervisorId": "5",
+            "className": "Class 1A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-28",
+            "endTime": "2025-04-28"
+        },
+        {
+            "id": "36",
+            "supervisorId": "6",
+            "className": "Class 2A",
+            "subject": "Biology",
+            "startTime": "2025-04-29",
+            "endTime": "2025-04-29"
+        },
+        {
+            "id": "37",
+            "supervisorId": "7",
+            "className": "Class 3A",
+            "subject": "Physics",
+            "startTime": "2025-04-30",
+            "endTime": "2025-04-30"
+        },
+        {
+            "id": "38",
+            "supervisorId": "8",
+            "className": "Class 4A",
+            "subject": "Math",
+            "startTime": "2025-05-01",
+            "endTime": "2025-05-01"
+        },
+        {
+            "id": "39",
+            "supervisorId": "9",
+            "className": "Class 5A",
+            "subject": "Chemistry",
+            "startTime": "2025-05-02",
+            "endTime": "2025-05-02"
+        },
+        {
+            "id": "40",
+            "supervisorId": "10",
+            "className": "Class 1A",
+            "subject": "Biology",
+            "startTime": "2025-04-23",
+            "endTime": "2025-04-23"
+        },
+        {
+            "id": "41",
+            "supervisorId": "1",
+            "className": "Class 2A",
+            "subject": "Physics",
+            "startTime": "2025-04-24",
+            "endTime": "2025-04-24"
+        },
+        {
+            "id": "42",
+            "supervisorId": "2",
+            "className": "Class 3A",
+            "subject": "Math",
+            "startTime": "2025-04-25",
+            "endTime": "2025-04-25"
+        },
+        {
+            "id": "43",
+            "supervisorId": "3",
+            "className": "Class 4A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-26",
+            "endTime": "2025-04-26"
+        },
+        {
+            "id": "44",
+            "supervisorId": "4",
+            "className": "Class 5A",
+            "subject": "Biology",
+            "startTime": "2025-04-27",
+            "endTime": "2025-04-27"
+        },
+        {
+            "id": "45",
+            "supervisorId": "5",
+            "className": "Class 1A",
+            "subject": "Physics",
+            "startTime": "2025-04-28",
+            "endTime": "2025-04-28"
+        },
+        {
+            "id": "46",
+            "supervisorId": "6",
+            "className": "Class 2A",
+            "subject": "Math",
+            "startTime": "2025-04-29",
+            "endTime": "2025-04-29"
+        },
+        {
+            "id": "47",
+            "supervisorId": "7",
+            "className": "Class 3A",
+            "subject": "Chemistry",
+            "startTime": "2025-04-30",
+            "endTime": "2025-04-30"
+        },
+        {
+            "id": "48",
+            "supervisorId": "8",
+            "className": "Class 4A",
+            "subject": "Biology",
+            "startTime": "2025-05-01",
+            "endTime": "2025-05-01"
+        },
+        {
+            "id": "49",
+            "supervisorId": "9",
+            "className": "Class 5A",
+            "subject": "Physics",
+            "startTime": "2025-05-02",
+            "endTime": "2025-05-02"
+        },
+        {
+            "id": "50",
+            "supervisorId": "10",
+            "className": "Class 1A",
+            "subject": "Math",
+            "startTime": "2025-04-23",
+            "endTime": "2025-04-23"
+        }
+    ],
+    "lesson_plans": [
+        {
+            "id": "lp1",
+            "traineeId": "101",
+            "supervisorId": "1",
+            "schoolId": "school1",
+            "title": "Introduction to Algebra",
+            "subject": "Math",
+            "class": "Jss 2",
+            "date": "2025-04-07",
+            "startTime": "09:00:00",
+            "endTime": "10:00:00",
+            "objectives": "Understand basic algebraic expressions",
+            "activities": "Solve simple equations",
+            "resources": "Textbook, whiteboard",
+            "createdAt": "2025-04-02T10:00:00Z",
+            "status": "PENDING",
+            "aiGenerated": false,
+            "traineeName": "Trainee1 Student1",
+            "supervisorName": "Supervisor1 Last1",
+            "schoolName": "School A",
+            "pdfUrl": null
+        },
+        {
+            "id": "lp2",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "schoolId": "school1",
+            "title": "Grammar Basics",
+            "subject": "English",
+            "class": "Jss 2",
+            "date": "2025-04-08",
+            "startTime": "10:00:00",
+            "endTime": "11:00:00",
+            "objectives": "Learn sentence structure",
+            "activities": "Write sentences",
+            "resources": "Grammar book",
+            "createdAt": "2025-04-03T11:00:00Z",
+            "status": "PENDING",
+            "aiGenerated": false,
+            "traineeName": "Trainee1 Student1",
+            "supervisorName": "Supervisor1 Last1",
+            "schoolName": "School A",
+            "pdfUrl": null
+        },
+        {
+            "id": "lp3",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "schoolId": "school2",
+            "title": "Photosynthesis Overview",
+            "subject": "Science",
+            "class": "SSS 3",
+            "date": "2025-04-09",
+            "startTime": "11:00:00",
+            "endTime": "12:00:00",
+            "objectives": "Understand the process of photosynthesis",
+            "activities": "Diagram labeling",
+            "resources": "Science textbook, projector",
+            "createdAt": "2025-04-04T09:00:00Z",
+            "status": "REJECTED",
+            "aiGenerated": false,
+            "traineeName": "Trainee2 Student2",
+            "supervisorName": "Supervisor2 Last2",
+            "schoolName": "School B",
+            "pdfUrl": null
+        },
+        {
+            "id": "lp4",
+            "traineeId": "103",
+            "supervisorId": "2",
+            "schoolId": "school2",
+            "title": "Advertisement Overview",
+            "subject": "Bussines Studies",
+            "class": "JSS 3",
+            "date": "2025-04-09",
+            "startTime": "11:00:00",
+            "endTime": "12:00:00",
+            "objectives": "Understand the process of Advertisement",
+            "activities": "Diagram labeling",
+            "resources": "Business textbook, projector",
+            "createdAt": "2025-04-04T09:00:00Z",
+            "status": "REJECTED",
+            "aiGenerated": false,
+            "traineeName": "Trainee3 Student3",
+            "supervisorName": "Supervisor2 Last2",
+            "schoolName": "School c",
+            "pdfUrl": null
+        },
+        {
+            "id": "lp7b50d5ca-96a2-48c7-8c4a-307638c26767",
+            "traineeId": "117",
+            "supervisorId": "8",
+            "schoolId": "school2",
+            "title": "Electricity",
+            "subject": "Mathematics",
+            "class": "JSS 3",
+            "date": "2025-04-25",
+            "startTime": "10:00",
+            "endTime": "11:00",
+            "objectives": "Define key terms related to electricity such as voltage, current, and resistance.\nCalculate the total resistance in a series circuit using Ohm's Law.\nAnalyze simple electrical circuits and identify components.",
+            "activities": "### Step 1: Understanding Key Terms\n- Teacher Activity: The teacher will define voltage, current, and resistance using clear diagrams on the whiteboard. Examples from Nigerian contexts (like household appliances) will be used to illustrate these terms.\n- Student Activity: Students will work in pairs to create flashcards for each term with definitions and examples.\n### Step 2: Ohm's Law\n- Teacher Activity: The teacher will explain Ohm's Law (V = I x R) using a multimedia projector to display a circuit diagram.\n- Student Activity: Students will solve practice problems on calculating voltage, current, and resistance based on given values.\n### Step 3: Series Circuits\n- Teacher Activity: The teacher will demonstrate how to set up a simple series circuit using batteries and light bulbs.\n- Student Activity: In small groups, students will create their own series circuits using provided materials and measure total resistance with multimeters.\n### Step 4: Analyzing Circuit Components\n- Teacher Activity: The teacher will guide students through identifying different components of a circuit (resistors, batteries) on the board.\n- Student Activity: Each group will present their circuit setup to the class, explaining how they calculated total resistance.\n\n### Rationale\nUnderstanding electricity is crucial in the modern world as it plays a vital role in everyday life and technological advancements. This lesson aligns with the NERDC curriculum by introducing students to the fundamental concepts of electricity, including voltage, current, and resistance. The topic is important not only for academic purposes but also for fostering critical thinking and problem-solving skills that are essential in real-world applications. By engaging students through interactive activities and practical examples, the lesson will cater to different learning styles while reinforcing mathematical concepts related to electricity. The pedagogical approach will emphasize hands-on learning, encouraging students to explore and discover the principles of electricity through experimentation and collaboration.\n\n### Homework\nStudents are assigned to write a one-page report on how electricity is generated in Nigeria or describe an electrical appliance they use at home along with its power rating.\n\n### References\nNERDC Mathematics Curriculum Guide\nTextbook on Basic Electricity\nOnline resources about electrical safety standards",
+            "resources": "Whiteboard, markers, electricity circuit diagrams, multimedia projector, worksheets",
+            "createdAt": "2025-05-03T19:34:43.729050+00:00Z",
+            "status": "APPROVED",
+            "aiGenerated": true,
+            "traineeName": "Trainee17 Student17",
+            "supervisorName": "Supervisor8 Last8",
+            "schoolName": "School B",
+            "pdfUrl": "/static/pdfs\\lp7b50d5ca-96a2-48c7-8c4a-307638c26767.pdf",
+            "updatedAt": "2025-05-03T19:36:48.646285Z",
+            "reviewComments": "Approved with scheduled observation",
+            "reviewScore": null
+        }
+    ],
+    "evaluationForms": [
+        {
+            "id": "7",
+            "title": "Evaluation Form 7"
+        },
+        {
+            "id": "8",
+            "title": "Evaluation Form 8"
+        },
+        {
+            "id": "9",
+            "title": "Evaluation Form 9"
+        }
+    ],
+    "announcements": [
+        {
+            "title": "Announcement 1",
+            "description": "Teaching practice update 1",
+            "date": "2025-04-24"
+        },
+        {
+            "title": "Announcement 2",
+            "description": "Teaching practice update 2",
+            "date": "2025-04-25"
+        },
+        {
+            "title": "Announcement 3",
+            "description": "Teaching practice update 3",
+            "date": "2025-04-26"
+        }
+    ],
+    "events": [
+        {
+            "id": 1,
+            "title": "Event 1",
+            "description": "Description for event 1",
+            "startTime": "2025-04-13",
+            "endTime": "2025-04-13"
+        },
+        {
+            "id": 2,
+            "title": "Event 2",
+            "description": "Description for event 2",
+            "startTime": "2025-04-14",
+            "endTime": "2025-04-14"
+        },
+        {
+            "id": 3,
+            "title": "Event 3",
+            "description": "Description for event 3",
+            "startTime": "2025-04-15",
+            "endTime": "2025-04-15"
+        },
+        {
+            "id": 4,
+            "title": "Event 4",
+            "description": "Description for event 4",
+            "startTime": "2025-04-16",
+            "endTime": "2025-04-16"
+        },
+        {
+            "id": 5,
+            "title": "Event 5",
+            "description": "Description for event 5",
+            "startTime": "2025-04-17",
+            "endTime": "2025-04-17"
+        },
+        {
+            "id": 6,
+            "title": "Event 6",
+            "description": "Description for event 6",
+            "startTime": "2025-04-18",
+            "endTime": "2025-04-18"
+        }
+    ],
+    "student_evaluations": [
+        {
+            "id": "eval-1",
+            "tpAssignmentId": "tp1",
+            "traineeId": "101",
+            "supervisorId": "1",
+            "score": 81,
+            "comments": "Trainee 1 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-14"
+        },
+        {
+            "id": "eval-2",
+            "tpAssignmentId": "tp2",
+            "traineeId": "102",
+            "supervisorId": "2",
+            "score": 82,
+            "comments": "Trainee 2 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-15"
+        },
+        {
+            "id": "eval-3",
+            "tpAssignmentId": "tp3",
+            "traineeId": "103",
+            "supervisorId": "3",
+            "score": 83,
+            "comments": "Trainee 3 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-16"
+        },
+        {
+            "id": "eval-4",
+            "tpAssignmentId": "tp4",
+            "traineeId": "104",
+            "supervisorId": "4",
+            "score": 84,
+            "comments": "Trainee 4 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-17"
+        },
+        {
+            "id": "eval-5",
+            "tpAssignmentId": "tp5",
+            "traineeId": "105",
+            "supervisorId": "5",
+            "score": 85,
+            "comments": "Trainee 5 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-18"
+        },
+        {
+            "id": "eval-6",
+            "tpAssignmentId": "tp6",
+            "traineeId": "106",
+            "supervisorId": "6",
+            "score": 86,
+            "comments": "Trainee 6 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-19"
+        },
+        {
+            "id": "eval-7",
+            "tpAssignmentId": "tp7",
+            "traineeId": "107",
+            "supervisorId": "7",
+            "score": 87,
+            "comments": "Trainee 7 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-20"
+        },
+        {
+            "id": "eval-8",
+            "tpAssignmentId": "tp8",
+            "traineeId": "108",
+            "supervisorId": "8",
+            "score": 88,
+            "comments": "Trainee 8 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-21"
+        },
+        {
+            "id": "eval-9",
+            "tpAssignmentId": "tp9",
+            "traineeId": "109",
+            "supervisorId": "9",
+            "score": 89,
+            "comments": "Trainee 9 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-22"
+        },
+        {
+            "id": "eval-10",
+            "tpAssignmentId": "tp10",
+            "traineeId": "110",
+            "supervisorId": "10",
+            "score": 90,
+            "comments": "Trainee 10 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-23"
+        },
+        {
+            "id": "eval-11",
+            "tpAssignmentId": "tp11",
+            "traineeId": "111",
+            "supervisorId": "1",
+            "score": 80,
+            "comments": "Trainee 11 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-24"
+        },
+        {
+            "id": "eval-12",
+            "tpAssignmentId": "tp12",
+            "traineeId": "112",
+            "supervisorId": "2",
+            "score": 81,
+            "comments": "Trainee 12 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-25"
+        },
+        {
+            "id": "eval-13",
+            "tpAssignmentId": "tp13",
+            "traineeId": "113",
+            "supervisorId": "3",
+            "score": 82,
+            "comments": "Trainee 13 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-26"
+        },
+        {
+            "id": "eval-14",
+            "tpAssignmentId": "tp14",
+            "traineeId": "114",
+            "supervisorId": "4",
+            "score": 83,
+            "comments": "Trainee 14 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-27"
+        },
+        {
+            "id": "eval-15",
+            "tpAssignmentId": "tp15",
+            "traineeId": "115",
+            "supervisorId": "5",
+            "score": 84,
+            "comments": "Trainee 15 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-28"
+        },
+        {
+            "id": "eval-16",
+            "tpAssignmentId": "tp16",
+            "traineeId": "116",
+            "supervisorId": "6",
+            "score": 85,
+            "comments": "Trainee 16 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-06-29"
+        },
+        {
+            "id": "eval-17",
+            "tpAssignmentId": "tp17",
+            "traineeId": "117",
+            "supervisorId": "7",
+            "score": 86,
+            "comments": "Trainee 17 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-06-30"
+        },
+        {
+            "id": "eval-18",
+            "tpAssignmentId": "tp18",
+            "traineeId": "118",
+            "supervisorId": "8",
+            "score": 87,
+            "comments": "Trainee 18 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-01"
+        },
+        {
+            "id": "eval-19",
+            "tpAssignmentId": "tp19",
+            "traineeId": "119",
+            "supervisorId": "9",
+            "score": 88,
+            "comments": "Trainee 19 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-02"
+        },
+        {
+            "id": "eval-20",
+            "tpAssignmentId": "tp20",
+            "traineeId": "120",
+            "supervisorId": "10",
+            "score": 89,
+            "comments": "Trainee 20 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-03"
+        },
+        {
+            "id": "eval-21",
+            "tpAssignmentId": "tp21",
+            "traineeId": "121",
+            "supervisorId": "1",
+            "score": 90,
+            "comments": "Trainee 21 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-04"
+        },
+        {
+            "id": "eval-22",
+            "tpAssignmentId": "tp22",
+            "traineeId": "122",
+            "supervisorId": "2",
+            "score": 80,
+            "comments": "Trainee 22 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-05"
+        },
+        {
+            "id": "eval-23",
+            "tpAssignmentId": "tp23",
+            "traineeId": "123",
+            "supervisorId": "3",
+            "score": 81,
+            "comments": "Trainee 23 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-06"
+        },
+        {
+            "id": "eval-24",
+            "tpAssignmentId": "tp24",
+            "traineeId": "124",
+            "supervisorId": "4",
+            "score": 82,
+            "comments": "Trainee 24 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-07"
+        },
+        {
+            "id": "eval-25",
+            "tpAssignmentId": "tp25",
+            "traineeId": "125",
+            "supervisorId": "5",
+            "score": 83,
+            "comments": "Trainee 25 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-08"
+        },
+        {
+            "id": "eval-26",
+            "tpAssignmentId": "tp26",
+            "traineeId": "126",
+            "supervisorId": "6",
+            "score": 84,
+            "comments": "Trainee 26 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-09"
+        },
+        {
+            "id": "eval-27",
+            "tpAssignmentId": "tp27",
+            "traineeId": "127",
+            "supervisorId": "7",
+            "score": 85,
+            "comments": "Trainee 27 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-10"
+        },
+        {
+            "id": "eval-28",
+            "tpAssignmentId": "tp28",
+            "traineeId": "128",
+            "supervisorId": "8",
+            "score": 86,
+            "comments": "Trainee 28 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-11"
+        },
+        {
+            "id": "eval-29",
+            "tpAssignmentId": "tp29",
+            "traineeId": "129",
+            "supervisorId": "9",
+            "score": 87,
+            "comments": "Trainee 29 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-12"
+        },
+        {
+            "id": "eval-30",
+            "tpAssignmentId": "tp30",
+            "traineeId": "130",
+            "supervisorId": "10",
+            "score": 88,
+            "comments": "Trainee 30 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-13"
+        },
+        {
+            "id": "eval-31",
+            "tpAssignmentId": "tp31",
+            "traineeId": "131",
+            "supervisorId": "1",
+            "score": 89,
+            "comments": "Trainee 31 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-14"
+        },
+        {
+            "id": "eval-32",
+            "tpAssignmentId": "tp32",
+            "traineeId": "132",
+            "supervisorId": "2",
+            "score": 90,
+            "comments": "Trainee 32 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-15"
+        },
+        {
+            "id": "eval-33",
+            "tpAssignmentId": "tp33",
+            "traineeId": "133",
+            "supervisorId": "3",
+            "score": 80,
+            "comments": "Trainee 33 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-16"
+        },
+        {
+            "id": "eval-34",
+            "tpAssignmentId": "tp34",
+            "traineeId": "134",
+            "supervisorId": "4",
+            "score": 81,
+            "comments": "Trainee 34 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-17"
+        },
+        {
+            "id": "eval-35",
+            "tpAssignmentId": "tp35",
+            "traineeId": "135",
+            "supervisorId": "5",
+            "score": 82,
+            "comments": "Trainee 35 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-18"
+        },
+        {
+            "id": "eval-36",
+            "tpAssignmentId": "tp36",
+            "traineeId": "136",
+            "supervisorId": "6",
+            "score": 83,
+            "comments": "Trainee 36 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-19"
+        },
+        {
+            "id": "eval-37",
+            "tpAssignmentId": "tp37",
+            "traineeId": "137",
+            "supervisorId": "7",
+            "score": 84,
+            "comments": "Trainee 37 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-20"
+        },
+        {
+            "id": "eval-38",
+            "tpAssignmentId": "tp38",
+            "traineeId": "138",
+            "supervisorId": "8",
+            "score": 85,
+            "comments": "Trainee 38 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-21"
+        },
+        {
+            "id": "eval-39",
+            "tpAssignmentId": "tp39",
+            "traineeId": "139",
+            "supervisorId": "9",
+            "score": 86,
+            "comments": "Trainee 39 showed good performance but needs to improve student engagement.",
+            "submittedAt": "2025-07-22"
+        },
+        {
+            "id": "eval-40",
+            "tpAssignmentId": "tp40",
+            "traineeId": "140",
+            "supervisorId": "10",
+            "score": 87,
+            "comments": "Trainee 40 showed strong performance but needs to improve lesson pacing.",
+            "submittedAt": "2025-07-23"
+        }
+    ],
+    "supervisor_evaluations": [
+        {
+            "id": "sup-eval-1",
+            "supervisorId": "1",
+            "rating": 9,
+            "comments": "Supervisor 1 provides constructive feedback",
+            "timestamp": "2025-04-24"
+        },
+        {
+            "id": "sup-eval-2",
+            "supervisorId": "2",
+            "rating": 8,
+            "comments": "Supervisor 2 provides constructive feedback",
+            "timestamp": "2025-04-25"
+        },
+        {
+            "id": "sup-eval-3",
+            "supervisorId": "3",
+            "rating": 9,
+            "comments": "Supervisor 3 provides constructive feedback",
+            "timestamp": "2025-04-26"
+        },
+        {
+            "id": "sup-eval-4",
+            "supervisorId": "4",
+            "rating": 8,
+            "comments": "Supervisor 4 provides constructive feedback",
+            "timestamp": "2025-04-27"
+        },
+        {
+            "id": "sup-eval-5",
+            "supervisorId": "5",
+            "rating": 9,
+            "comments": "Supervisor 5 provides constructive feedback",
+            "timestamp": "2025-04-28"
+        },
+        {
+            "id": "sup-eval-6",
+            "supervisorId": "6",
+            "rating": 8,
+            "comments": "Supervisor 6 provides constructive feedback",
+            "timestamp": "2025-04-29"
+        },
+        {
+            "id": "sup-eval-7",
+            "supervisorId": "7",
+            "rating": 9,
+            "comments": "Supervisor 7 provides constructive feedback",
+            "timestamp": "2025-04-30"
+        },
+        {
+            "id": "sup-eval-8",
+            "supervisorId": "8",
+            "rating": 8,
+            "comments": "Supervisor 8 provides constructive feedback",
+            "timestamp": "2025-05-01"
+        },
+        {
+            "id": "sup-eval-9",
+            "supervisorId": "9",
+            "rating": 9,
+            "comments": "Supervisor 9 provides constructive feedback",
+            "timestamp": "2025-05-02"
+        },
+        {
+            "id": "sup-eval-10",
+            "supervisorId": "10",
+            "rating": 8,
+            "comments": "Supervisor 10 provides constructive feedback",
+            "timestamp": "2025-05-03"
+        }
+    ]
+}

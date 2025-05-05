@@ -3,10 +3,12 @@ from flask_cors import CORS
 import jwt
 import bcrypt
 import json
+from math import ceil
 import traceback
 from typing import Dict, List, Union, Optional, Tuple
 from flask import send_file
 from datetime import datetime, timedelta, timezone
+from dateutil.parser import parse
 import csv
 import io
 import uuid
@@ -14,8 +16,8 @@ from zoneinfo import ZoneInfo
 import re
 import logging
 from mockup import save_users, load_users, generate_unique_id
+from utility import *
 from functools import wraps
-
 import uuid
 from datetime import datetime, time, timezone
 import logging
@@ -29,8 +31,6 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import html2text
-
-
 import requests
 import os
 from dotenv import load_dotenv
@@ -40,12 +40,15 @@ from flask import send_file
 
 load_dotenv()
 
+# Set up allowed websites from an environment variable
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 
 
 app = Flask(__name__)
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Authorization", "Content-Type"],
         "supports_credentials": True
@@ -65,8 +68,51 @@ lock = Lock()  # Define global lock
 logging.basicConfig(level=logging.DEBUG)  # Changed to DEBUG for more granularity
 logger = logging.getLogger(__name__)
 
-# Load users
+
+
+# Initialize html2text
+h = html2text.HTML2Text()
+h.ignore_links = True
+h.ignore_images = True
+
+
+
+
+# Mock users data (loaded from users.json)
+global users
+# Assume users is loaded via load_users() at app startup
 users = load_users()
+
+
+
+
+
+# Authentication decorator
+def _require_auth(allowed_roles: Optional[list] = None):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    logger.error("Missing or invalid Authorization header")
+                    return {"error": "Missing or invalid Authorization header", "status": 401}, 401
+                token = auth_header.split("Bearer ")[1]
+                decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                if allowed_roles and decoded["role"] not in allowed_roles:
+                    logger.error(f"Unauthorized role: {decoded['role']}")
+                    return {"error": f"Unauthorized: Role {decoded['role']} not allowed", "status": 403}, 403
+                return f(decoded=decoded, *args, **kwargs)
+            except jwt.InvalidTokenError as e:
+                logger.error(f"Token error: {str(e)}")
+                return {"error": "Invalid or expired token", "status": 401}, 401
+            except Exception as e:
+                logger.error(f"Auth error: {str(e)}", exc_info=True)
+                return {"error": f"Authentication error: {str(e)}", "status": 500}, 500
+        return decorated_function
+    return decorator
+
+
 
 # Error Handlers
 @app.errorhandler(404)
@@ -98,278 +144,8 @@ def options_handler(path):
     logger.debug(f"OPTIONS response headers: {response.headers}")
     return response, 200
 
-def verify_token(token: str) -> Optional[dict]:
-    logger.debug(f"Attempting to verify token: {token[:10]}... (length: {len(token)})")
-    if not token:
-        logger.warning("Empty token received")
-        return None
-    try:
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        logger.debug(f"Token decoded: {decoded}")
-        return decoded
-    except jwt.ExpiredSignatureError:
-        logger.warning("Token expired")
-        return None
-    except jwt.InvalidTokenError as e:
-        logger.warning(f"Invalid token: {str(e)}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected token error: {str(e)}")
-        return None
-
-def require_2auth(allowed_roles=None):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            logger.debug(f"Authenticating request: headers={request.headers}")
-            token = request.headers.get("Authorization", "").replace("Bearer ", "")
-            logger.debug(f"Token received: {token[:10]}... (length: {len(token)})")
-            try:
-                decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                logger.debug(f"Token decoded: {decoded}")
-                if allowed_roles and decoded.get("role") not in allowed_roles:
-                    logger.error(f"Unauthorized: role {decoded.get('role')} not in {allowed_roles}")
-                    return jsonify({"error": "Unauthorized: Insufficient role"}), 403
-                return f(decoded, *args, **kwargs)
-            except jwt.InvalidTokenError as e:
-                logger.error(f"Invalid token: {str(e)}")
-                return jsonify({"error": "Invalid or expired token"}), 401
-            except Exception as e:
-                logger.error(f"Unexpected auth error: {str(e)}\n{traceback.format_exc()}")
-                return jsonify({"error": "Authentication error", "details": str(e)}), 500
-        return decorated_function
-    return decorator
-
-def parse_time(time_str: str) -> str:
-    if not time_str or not isinstance(time_str, str):
-        logger.debug(f"Invalid time input: {time_str}")
-        return ""
-    try:
-        # Handle HH:MM format
-        if len(time_str.split(":")) == 2:
-            datetime.strptime(time_str, "%H:%M")
-            return f"{time_str}:00"
-        # Handle HH:MM:SS format
-        elif len(time_str.split(":")) == 3:
-            datetime.strptime(time_str, "%H:%M:%S")
-            return time_str
-        # Handle ISO format (e.g., 2025-04-21T09:00:00Z)
-        elif "T" in time_str:
-            parsed = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
-            return parsed.strftime("%H:%M:%S")
-        else:
-            raise ValueError("Invalid time format")
-    except ValueError as e:
-        logger.warning(f"Time parsing error: {str(e)} for input: {time_str}")
-        raise ValueError("Time must be in HH:MM, HH:MM:SS, or ISO format")
-
-def require_auth(allowed_roles: Optional[Union[str, list]] = None) -> Tuple[Optional[dict], Optional[dict]]:
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    logger.debug(f"Full token received: {token}")
-    decoded = verify_token(token)
-    if not decoded:
-        return None, {"error": "Invalid or expired token", "status": 401}
-    if allowed_roles:
-        roles = [allowed_roles] if isinstance(allowed_roles, str) else allowed_roles
-        if decoded.get("role") not in roles:
-            return None, {"error": "Unauthorized: Insufficient role", "status": 403}
-    return decoded, None
 
 
-
-
-
-def require_3auth(allowed_roles: Optional[Union[str, List[str]]] = None) -> Tuple[Optional[Dict], Optional[Dict]]:
-    """
-    Authenticate a request by verifying the JWT token and checking role permissions.
-    
-    Args:
-        allowed_roles: A single role (str), list of roles (List[str]), or None (no role restriction).
-    
-    Returns:
-        Tuple containing:
-        - Decoded token (dict) or None if authentication fails.
-        - Error response (dict) or None if authentication succeeds.
-    """
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    logger.debug(f"Full token received: {token[:10]}... (truncated)")
-
-    decoded = verify_token(token)
-    if not decoded:
-        logger.warning("Authentication failed: Invalid or expired token")
-        return None, {"error": "Invalid or expired token", "status": 401}
-
-    if allowed_roles is not None:
-        # Convert single string to list, or use list directly
-        roles = [allowed_roles] if isinstance(allowed_roles, str) else allowed_roles
-        logger.debug(f"Checking roles: allowed={roles}, user_role={decoded.get('role')}")
-
-        # Validate that roles is a list of strings
-        if not isinstance(roles, list) or not all(isinstance(role, str) for role in roles):
-            logger.error(f"Invalid allowed_roles format: {allowed_roles}")
-            return None, {"error": "Internal server error: Invalid role configuration", "status": 500}
-
-        # Check if user's role is in allowed roles
-        user_role = decoded.get("role")
-        if user_role not in roles:
-            logger.warning(f"Unauthorized: User role {user_role} not in allowed roles {roles}")
-            return None, {"error": "Unauthorized: Insufficient role", "status": 403}
-
-    logger.debug("Authentication successful")
-    return decoded, None
-def get_trainee_assignment(trainee_id: str) -> Optional[dict]:
-    assignment = next((a for a in users.get("tp_assignments", []) if a["traineeId"] == trainee_id), None)
-    if not assignment:
-        return None
-    
-    # Look up the school name
-    schools = users.get("schools", [])
-    school = next((s for s in schools if s["id"] == assignment["schoolId"]), None)
-    school_name = school["name"] if school else "Unknown School"
-    
-    # Look up the supervisor name
-    supervisor_id = assignment.get("supervisorId")
-    supervisor_name = "Not Assigned"
-    if supervisor_id:
-        supervisors = users.get("supervisor", [])
-        supervisor = next((s for s in supervisors if s["id"] == supervisor_id), None)
-        if supervisor:
-            supervisor_name = f"{supervisor['name']} {supervisor['surname']}"
-            supervisor_staffid = supervisor['staffid']
-    
-    
-    return {
-        "supervisorId": supervisor_id,
-        "supervisorName": supervisor_name,
-        "supervisorStaffId": supervisor_staffid,
-        "placeOfTP": school_name,
-        "traineeId": assignment["traineeId"],
-        "schoolId": assignment["schoolId"],
-        "startDate": assignment["startDate"],
-        "endDate": assignment["endDate"]
-    }
-
-def is_valid_date(date_str):
-    """Validate YYYY-MM-DD format."""
-    if not date_str:
-        return True  # Allow empty dates
-    try:
-        datetime.strptime(date_str, "%Y-%m-%d")
-        return True
-    except ValueError:
-        return False
-    
-
-# Authentication decorator
-def _require_auth(allowed_roles: Optional[list] = None):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            try:
-                auth_header = request.headers.get("Authorization")
-                if not auth_header or not auth_header.startswith("Bearer "):
-                    logger.error("Missing or invalid Authorization header")
-                    return {"error": "Missing or invalid Authorization header", "status": 401}, 401
-                token = auth_header.split("Bearer ")[1]
-                decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                if allowed_roles and decoded["role"] not in allowed_roles:
-                    logger.error(f"Unauthorized role: {decoded['role']}")
-                    return {"error": f"Unauthorized: Role {decoded['role']} not allowed", "status": 403}, 403
-                return f(decoded=decoded, *args, **kwargs)
-            except jwt.InvalidTokenError as e:
-                logger.error(f"Token error: {str(e)}")
-                return {"error": "Invalid or expired token", "status": 401}, 401
-            except Exception as e:
-                logger.error(f"Auth error: {str(e)}", exc_info=True)
-                return {"error": f"Authentication error: {str(e)}", "status": 500}, 500
-        return decorated_function
-    return decorator
-
-def parse_time(time_str: str) -> Optional[str]:
-    """Parse time string to HH:MM:SS format."""
-    try:
-        # Try HH:MM format first
-        dt = datetime.strptime(time_str, "%H:%M")
-        return dt.strftime("%H:%M:00")
-    except ValueError:
-        try:
-            # Try HH:MM:SS format
-            dt = datetime.strptime(time_str, "%H:%M:%S")
-            return dt.strftime("%H:%M:00")
-        except ValueError:
-            try:
-                # Try ISO format
-                dt = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
-                return dt.strftime("%H:%M:00")
-            except ValueError:
-                return None
-
-def sanitize_html(text: str) -> str:
-    """Sanitize HTML content to prevent XSS."""
-    allowed_tags = ["p", "br", "strong", "em", "ul", "li", "ol"]
-    return bleach.clean(text, tags=allowed_tags, strip=True)
-   
-    
-def decode_jwt(token: str) -> dict:
-    """Decode and validate a JWT token."""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        if "identifier" not in payload or "role" not in payload:
-            raise jwt.InvalidTokenError("Missing required claims in token")
-        return payload
-    except jwt.ExpiredSignatureError:
-        logger.error("JWT token has expired")
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError as e:
-        logger.error(f"Invalid JWT token: {str(e)}")
-        raise ValueError("Invalid token")
-    except Exception as e:
-        logger.error(f"Error decoding JWT token: {str(e)}")
-        raise ValueError(f"Token decoding error: {str(e)}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@app.route("/api/notifications/unread-count", methods=["GET"])
-def get_unread_notifications_count():
-    try:
-        # Validate Authorization header
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"message": "Missing or invalid Authorization header"}), 401
-        
-        token = auth_header.split("Bearer ")[1]
-        user = decode_jwt(token)
-        
-        # Load users data (optimized to read only notifications)
-        users_data = load_users()
-        notifications = users_data.get("notifications", [])
-        
-        # Count unread notifications for the user
-        unread_count = sum(
-            1 for n in notifications
-            if n["user_id"] == user["identifier"] and not n.get("read_status", True)
-        )
-        
-        logger.info(f"Fetched unread count {unread_count} for user {user['identifier']}")
-        return jsonify({"unread_count": unread_count}), 200
-    except ValueError as e:
-        return jsonify({"message": str(e)}), 401
-    except Exception as e:
-        logger.error(f"Error fetching unread count: {str(e)}")
-        return jsonify({"message": f"Error: {str(e)}"}), 500
 
 @app.route('/api/notifications', methods=['GET', 'POST', 'OPTIONS'])
 def manage_notifications():
@@ -382,15 +158,24 @@ def manage_notifications():
         return jsonify({"error": error["error"]}), error["status"]
     
     users_data = load_users()
-    user_id = decoded['identifier']
-    logger.info(f"Processing notifications for user_id: {user_id}")
+    # Map decoded["identifier"] to user id
+    user = None
+    for role in ['admin', 'supervisor', 'teacherTrainee']:
+        user = next((u for u in users_data.get(role, []) if u.get('regNo', u.get('staffId', u.get('username', ''))) == decoded['identifier']), None)
+        if user:
+            break
+    if not user:
+        logger.error(f"User not found for identifier: {decoded['identifier']}")
+        return jsonify({"error": "User not found"}), 404
+    user_id = user['id']
+    
     notifications = users_data.get('notifications', [])
 
     if request.method == 'GET':
         try:
             notification_type = request.args.get('type', '').upper()
             priority = request.args.get('priority', '').upper()
-            read_status = request.args.get('read', '').lower()
+            read_status = request.args.get('read_status', '').lower()
             search = request.args.get('search', '').lower()
             page = int(request.args.get('page', 1))
             per_page = ITEMS_PER_PAGE
@@ -405,7 +190,6 @@ def manage_notifications():
             events = {str(e['id']): e for e in users_data.get('events', [])}
             for n in user_notifications:
                 n_copy = n.copy()
-                # Normalize created_at
                 if not n_copy.get('created_at'):
                     logger.warning(f"Missing created_at for notification {n_copy.get('id')}")
                     n_copy['created_at'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -496,6 +280,50 @@ def manage_notifications():
             logger.error(f"Error creating notification: {str(e)}")
             return jsonify({"error": "Failed to create notification", "details": str(e)}), 500
 
+@app.route("/api/notifications/unread-count", methods=["GET"])
+def get_unread_notifications_count():
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"message": "Missing or invalid Authorization header"}), 401
+        
+        token = auth_header.split("Bearer ")[1]
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        
+        users_data = load_users()
+        user = None
+        for role in ['admin', 'supervisor', 'teacherTrainee']:
+            user = next((u for u in users_data.get(role, []) if u.get('regNo', u.get('staffId', u.get('username', ''))) == decoded['identifier']), None)
+            if user:
+                break
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        user_id = user['id']
+        
+        notifications = users_data.get("notifications", [])
+        unread_count = sum(
+            1 for n in notifications
+            if n["user_id"] == user_id and not n.get("read_status", True)
+        )
+        
+        logger.info(f"Fetched unread count {unread_count} for user {user_id}")
+        return jsonify({"unread_count": unread_count}), 200
+    except jwt.ExpiredSignatureError:
+        return jsonify({"message": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"message": "Invalid token"}), 401
+    except Exception as e:
+        logger.error(f"Error fetching unread count: {str(e)}")
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+
+
+
+
+
+
+
+
+
 @app.route('/api/notifications/<notification_id>', methods=['PUT', 'DELETE'])
 def update_delete_notification(notification_id):
     decoded, error_response = require_auth()
@@ -504,7 +332,11 @@ def update_delete_notification(notification_id):
         return jsonify({"error": error_response["error"]}), error_response["status"]
     
     users_data = load_users()
-    user_identifier = decoded['identifier']
+    user_id = get_user_id(decoded['identifier'], users_data)
+    if not user_id:
+        logger.error(f"User not found for identifier: {decoded['identifier']}")
+        return jsonify({"error": "User not found"}), 404
+    
     notifications = users_data.get('notifications', [])
     
     if request.method == 'PUT':
@@ -513,11 +345,11 @@ def update_delete_notification(notification_id):
             if 'read_status' not in data:
                 return jsonify({"error": "Missing read_status in request body"}), 400
             
-            logger.debug(f"Attempting to update notification {notification_id} by {user_identifier}")
+            logger.debug(f"Attempting to update notification {notification_id} by user {user_id}")
             for n in notifications:
                 if n['id'] == notification_id:
-                    if not (decoded['role'] == 'admin' or n['user_id'] == user_identifier):
-                        logger.warning(f"Unauthorized: {user_identifier} cannot update {notification_id} (user_id: {n['user_id']})")
+                    if not (decoded['role'] == 'admin' or n['user_id'] == user_id):
+                        logger.warning(f"Unauthorized: {user_id} cannot update {notification_id} (user_id: {n['user_id']})")
                         return jsonify({"error": "Unauthorized: Only recipient or admin can update read status"}), 403
                     n['read_status'] = data['read_status']
                     # Normalize created_at
@@ -531,15 +363,16 @@ def update_delete_notification(notification_id):
                         except ValueError:
                             logger.warning(f"Invalid created_at for notification {n['id']}: {n['created_at']}")
                             n['created_at'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-                    users_data['notifications'] = notifications
-                    save_users(users_data)
+                    with lock:
+                        users_data['notifications'] = notifications
+                        save_users(users_data)
                     unread_count = len([
                         n for n in notifications
-                        if (n['user_id'] == user_identifier or n['initiator_id'] == user_identifier) and n['read_status'] is False
+                        if (n['user_id'] == user_id or n['initiator_id'] == user_id) and n['read_status'] is False
                     ])
-                    logger.info(f"Updated notification {notification_id} read_status to {data['read_status']} by {user_identifier}, unread count: {unread_count}")
+                    logger.info(f"Updated notification {notification_id} read_status to {data['read_status']} by {user_id}, unread count: {unread_count}")
                     return jsonify({"notification": n, "unread_count": unread_count}), 200
-            logger.warning(f"Notification {notification_id} not found for {user_identifier}")
+            logger.warning(f"Notification {notification_id} not found for {user_id}")
             return jsonify({"error": "Notification not found"}), 404
         except Exception as e:
             logger.error(f"Error updating notification {notification_id}: {str(e)}")
@@ -548,24 +381,30 @@ def update_delete_notification(notification_id):
     elif request.method == 'DELETE':
         try:
             if decoded['role'] != 'admin':
-                logger.warning(f"Unauthorized: {user_identifier} (role: {decoded['role']}) cannot delete notifications")
+                logger.warning(f"Unauthorized: {user_id} (role: {decoded['role']}) cannot delete notifications")
                 return jsonify({"error": "Unauthorized: Only admins can delete notifications"}), 403
             initial_count = len(notifications)
             notifications = [n for n in notifications if n['id'] != notification_id]
             if len(notifications) == initial_count:
-                logger.warning(f"Notification {notification_id} not found for deletion by {user_identifier}")
+                logger.warning(f"Notification {notification_id} not found for deletion by {user_id}")
                 return jsonify({"error": "Notification not found"}), 404
-            users_data['notifications'] = notifications
-            save_users(users_data)
+            with lock:
+                users_data['notifications'] = notifications
+                save_users(users_data)
             unread_count = len([
                 n for n in notifications
-                if (n['user_id'] == user_identifier or n['initiator_id'] == user_identifier) and n['read_status'] is False
+                if (n['user_id'] == user_id or n['initiator_id'] == user_id) and n['read_status'] is False
             ])
-            logger.info(f"Deleted notification {notification_id} by {user_identifier}, unread count: {unread_count}")
+            logger.info(f"Deleted notification {notification_id} by {user_id}, unread count: {unread_count}")
             return jsonify({"message": "Notification deleted", "unread_count": unread_count}), 200
         except Exception as e:
             logger.error(f"Error deleting notification {notification_id}: {str(e)}")
             return jsonify({"error": "Failed to delete notification", "details": str(e)}), 500
+
+
+
+
+
 
 @app.route('/api/evaluations', methods=['POST'])
 def submit_evaluation():
@@ -893,7 +732,7 @@ def get_trainees():
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
     
-    decoded, error_response = require_auth("admin")
+    decoded, error_response = require_auth(["admin"])
     if error_response:
         return error_response
     
@@ -907,15 +746,7 @@ def get_trainees():
         trainees = users.get("teacherTrainee", [])
   
   
-        #   # Apply supervisorId filter if provided
-        # if supervisor_id:
-        #     # Verify supervisor exists
-        #     supervisors = users.get("supervisor", [])
-        #     if not any(s.get("i") == supervisor_id for s in supervisors):
-        #         return jsonify({"error": f"Supervisor with ID {supervisor_id} not found"}), 404
-        #     trainees = [t for t in trainees if t.get("supervisorId") == supervisor_id]
-        
-  
+
 
         
         # Apply search filter across multiple fields
@@ -1039,135 +870,6 @@ def get_trainees_id():
         print(f"Error in get_trainees: {str(e)}")
         return jsonify({"error": "Failed to fetch trainees", "details": str(e)}), 500
 
-# @app.route("/api/trainees/bulk", methods=["POST", "OPTIONS"])
-# def bulk_create_trainees():
-#     if request.method == "OPTIONS":
-#         return jsonify({"status": "ok"}), 200
-    
-#     decoded, error_response = require_auth()
-#     if error_response:
-#         return error_response
-    
-#     if decoded["role"] != "admin":
-#         return jsonify({"error": "Unauthorized: Only admins can bulk create trainees"}), 403
-    
-#     if "file" not in request.files:
-#         return jsonify({"error": "No file provided"}), 400
-    
-#     file = request.files["file"]
-    
-#     if not file.filename.endswith(".csv"):
-#         return jsonify({"error": "File must be a CSV"}), 400
-    
-#     supervisor_staffid = request.form.get("supervisorId", "")
-#     school_id = request.form.get("schoolId", "")
-    
-#     supervisor_user_id = ""
-#     if supervisor_staffid:
-#         supervisors = users.get("supervisor", [])
-#         supervisor = next((s for s in supervisors if s.get("staffid") == supervisor_staffid), None)
-#         if not supervisor:
-#             return jsonify({"error": f"Supervisor with staffid {supervisor_staffid} not found"}), 404
-#         supervisor_user_id = supervisor["id"]
-#     if school_id:
-#         schools = users.get("schools", [])
-#         if not any(s.get("id") == school_id for s in schools):
-#             return jsonify({"error": f"School with ID {school_id} not found"}), 404
-    
-#     stream = io.StringIO(file.stream.read().decode("UTF-8"))
-#     csv_reader = csv.DictReader(stream)
-    
-#     required_fields = ["regNo", "name", "surname", "email", "password", "phone", "address", "bloodType", "sex", "birthday"]
-#     optional_fields = ["img", "supervisorId", "schoolId"]
-    
-#     missing_fields = [field for field in required_fields if field not in csv_reader.fieldnames]
-#     if missing_fields:
-#         return jsonify({"error": "CSV missing required fields: " + ", ".join(missing_fields)}), 400
-    
-#     trainees = users.get("teacherTrainee", [])
-#     assignments = users.get("tp_assignments", [])
-#     created_trainees = []
-#     created_assignments = []
-#     errors = []
-    
-#     for row in csv_reader:
-#         if row["sex"] not in ["MALE", "FEMALE"]:
-#             errors.append(f"Invalid sex value for regNo {row['regNo']}: must be 'MALE' or 'FEMALE'")
-#             continue
-        
-#         if any(t["regNo"] == row["regNo"] for t in trainees):
-#             errors.append(f"Trainee with regNo {row['regNo']} already exists")
-#             continue
-#         if any(t["email"] == row["email"] for t in trainees):
-#             errors.append(f"Trainee with email {row['email']} already exists")
-#             continue
-        
-#         try:
-#             hashed_password = bcrypt.hashpw(row["password"].encode(), bcrypt.gensalt())
-#         except Exception as e:
-#             errors.append(f"Error hashing password for regNo {row['regNo']}: {str(e)}")
-#             continue
-        
-#         row_supervisor_staffid = row.get("supervisorId", supervisor_staffid)
-#         row_supervisor_user_id = ""
-#         if row_supervisor_staffid:
-#             supervisors = users.get("supervisor", [])
-#             supervisor = next((s for s in supervisors if s.get("staffid") == row_supervisor_staffid), None)
-#             if not supervisor:
-#                 errors.append(f"Invalid supervisorId (staffid) {row_supervisor_staffid} for regNo {row['regNo']}")
-#                 continue
-#             row_supervisor_user_id = supervisor["id"]
-#         row_school_id = row.get("schoolId", school_id)
-#         if row_school_id:
-#             schools = users.get("schools", [])
-#             if not any(s.get("id") == row_school_id for s in schools):
-#                 errors.append(f"Invalid schoolId {row_school_id} for regNo {row['regNo']}")
-#                 continue
-        
-#         new_trainee = {
-#             "id": generate_unique_id(),
-#             "regNo": row["regNo"],
-#             "password": hashed_password.decode("utf-8"),
-#             "email": row["email"],
-#             "role": "teacherTrainee",
-#             "name": row["name"],
-#             "surname": row["surname"],
-#             "phone": row["phone"],
-#             "address": row["address"],
-#             "bloodType": row["bloodType"],
-#             "sex": row["sex"],
-#             "birthday": row["birthday"],
-#             "progress": 0,
-#             "img": row.get("img", ""),
-#             "createdAt": datetime.now().isoformat() + "Z"
-#         }
-        
-#         trainees.append(new_trainee)
-#         created_trainees.append({k: v for k, v in new_trainee.items() if k != "password"})
-        
-#         if row_supervisor_user_id or row_school_id:
-#             new_assignment = {
-#                 "traineeId": new_trainee["id"],
-#                 "supervisorId": row_supervisor_user_id or "",
-#                 "schoolId": row_school_id or "default-school-id",
-#                 "startDate": datetime.now().isoformat() + "Z",
-#                 "endDate": (datetime.now() + timedelta(days=365)).isoformat() + "Z"
-#             }
-#             assignments.append(new_assignment)
-#             created_assignments.append(new_assignment)
-    
-#     if errors:
-#         return jsonify({"message": "Some trainees were not created", "errors": errors, "created": created_trainees, "assignments": created_assignments}), 207
-    
-#     users["teacherTrainee"] = trainees
-#     users["tp_assignments"] = assignments
-#     save_users(users)
-    
-#     return jsonify({"message": "Trainees created successfully", "created": created_trainees, "assignments": created_assignments}), 201
-# ### Detailed Explanation of Changes
-
-
-
 
 
 
@@ -1259,32 +961,129 @@ def manage_trainee(id):
 
 
 
-@app.route("/api/tp-assignments/<trainee_id>", methods=["GET"])
-def get_tp_assignment(trainee_id):
-    decoded, error_response = require_admin_auth()
-    if error_response:
-        return error_response
+# @app.route("/api/tp-assignments/<trainee_id>", methods=["GET"])
+# def get_tp_assignment(trainee_id):
+#     decoded, error_response = require_admin_auth()
+#     if error_response:
+#         return error_response
 
-    assignments = users.get("tp_assignments", [])
-    assignment = None
-    for a in assignments:
-        if a["traineeId"] == trainee_id:
-            assignment = a
-            break
+#     assignments = users.get("tp_assignments", [])
+#     assignment = None
+#     for a in assignments:
+#         if a["traineeId"] == trainee_id:
+#             assignment = a
+#             break
 
-    if not assignment:
-        return jsonify({"placeOfTP": "", "supervisorId": ""}), 200
+#     if not assignment:
+#         return jsonify({"placeOfTP": "", "supervisorId": ""}), 200
 
-    school = None
-    for s in users.get("schools", []):
-        if s["id"] == assignment["schoolId"]:
-            school = s
-            break
+#     school = None
+#     for s in users.get("schools", []):
+#         if s["id"] == assignment["schoolId"]:
+#             school = s
+#             break
 
-    return jsonify({
-        "placeOfTP": school["name"] if school else "",
-        "supervisorId": assignment["supervisorId"]
-    }), 200
+#     return jsonify({
+#         "placeOfTP": school["name"] if school else "",
+#         "supervisorId": assignment["supervisorId"]
+#     }), 200
+
+
+@app.route('/api/tp-assignments/<trainee_id>', methods=['GET', 'OPTIONS'])
+@_require_auth(['admin', 'teacherTrainee'])
+def get_tp_assignment(decoded, trainee_id):
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        return response, 200
+
+    try:
+        users_data = load_users()
+        # Validate trainee exists
+        trainee = next((t for t in users_data.get('teacherTrainee', []) if t['id'] == trainee_id), None)
+        if not trainee:
+            logger.error(f"Trainee not found: {trainee_id}")
+            return jsonify({"error": "Trainee not found"}), 404
+
+        # Access control: Trainees can only view their own assignment
+        if decoded['role'] == 'teacherTrainee' and decoded['identifier'] != trainee['regNo']:
+            logger.warning(f"Unauthorized: {decoded['identifier']} cannot access TP assignment for {trainee_id}")
+            return jsonify({"error": "Unauthorized: You can only view your own TP assignment"}), 403
+
+        # Fetch assignment using existing function
+        assignment = get_trainee_assignment(trainee_id)
+        if not assignment:
+            logger.info(f"No TP assignment found for trainee {trainee_id}")
+            response = jsonify({
+                'assignment': {
+                    'supervisorId': '',
+                    'supervisorName': 'Not Assigned',
+                    'supervisorStaffId': '',
+                    'schoolId': '',
+                    'schoolName': 'Not Assigned',
+                    'placeOfTP': 'Not Assigned',
+                    'traineeId': trainee_id,
+                    'startDate': '',
+                    'endDate': '',
+                    'status': 'Not Assigned'
+                }
+            })
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 200
+
+        # Determine status
+        status = 'Assigned'
+        try:
+            current_date = datetime.now(timezone.utc).date()
+            start_date = None
+            end_date = None
+            if assignment['startDate']:
+                start_date = datetime.strptime(assignment['startDate'], '%Y-%m-%d').date()
+            if assignment['endDate']:
+                end_date = datetime.strptime(assignment['endDate'], '%Y-%m-%d').date()
+            
+            if not assignment['supervisorId'] or not assignment['schoolId']:
+                status = 'Not Assigned'
+            elif start_date and end_date:
+                if current_date < start_date:
+                    status = 'Pending'
+                elif current_date > end_date:
+                    status = 'Completed'
+        except ValueError as e:
+            logger.warning(f"Invalid date format for trainee {trainee_id}: {str(e)}")
+            status = 'Not Assigned'
+
+        response_assignment = {
+            'supervisorId': assignment['supervisorId'],
+            'supervisorName': assignment['supervisorName'],
+            'supervisorStaffId': assignment['supervisorStaffId'],
+            'schoolId': assignment['schoolId'],
+            'schoolName': assignment['schoolName'],
+            'placeOfTP': assignment['placeOfTP'],
+            'traineeId': assignment['traineeId'],
+            'startDate': assignment['startDate'],
+            'endDate': assignment['endDate'],
+            'status': status
+        }
+
+        logger.info(f"Fetched TP assignment for trainee {trainee_id}")
+        response = jsonify({'assignment': response_assignment})
+        
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
+
+    except Exception as e:
+        logger.error(f"Error fetching TP assignment for trainee {trainee_id}: {str(e)}")
+        response = jsonify({"error": "Failed to fetch TP assignment", "details": str(e)})
+        
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 500
+
+
+
+
+
+
 
 @app.route("/api/places-of-tp", methods=["GET"])
 def get_places_of_tp():
@@ -1416,7 +1215,9 @@ def create_tp_assignment():
     if end_date and not is_valid_date(end_date):
         return jsonify({"error": "Invalid endDate format, use YYYY-MM-DD"}), 400
 
+
     users_data = users
+
     new_assignment = {
         "id": generate_unique_id(),
         "traineeId": data.get("traineeId"),
@@ -1484,6 +1285,222 @@ def create_tp_assignment():
     }), 201
 
 
+@app.route('/api/admin/tp_assignments/<tp_assignment_id>', methods=['PUT', 'OPTIONS'])
+def update_tp_assignment(tp_assignment_id):
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        return response, 200
+
+    decoded, error_response = require_auth("admin")
+    if error_response:
+        response = jsonify(error_response[0]), error_response[1]
+
+    try:
+        data = request.get_json() or {}
+        required_fields = ['traineeId', 'schoolId', 'supervisorId']
+        if not all(field in data for field in required_fields):
+            logger.error(f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}")
+            response = jsonify({"error": f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}"})
+            return response, 400
+
+        users_data = load_users()
+
+        # Validate assignment
+        assignment = next((a for a in users_data.get('tp_assignments', []) if a['id'] == tp_assignment_id), None)
+        if not assignment:
+            logger.error(f"TP assignment not found: {tp_assignment_id}")
+            response = jsonify({"error": "TP assignment not found"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 404
+
+        # Verify traineeId matches assignment
+        if data['traineeId'] != assignment['traineeId']:
+            logger.error(f"Trainee ID mismatch: {data['traineeId']} does not match assignment {tp_assignment_id}")
+            response = jsonify({"error": "Trainee ID does not match existing assignment"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 400
+
+        # Validate trainee, school, and supervisor
+        trainee = next((t for t in users_data.get('teacherTrainee', []) if t['id'] == data['traineeId']), None)
+        if not trainee:
+            logger.error(f"Trainee not found: {data['traineeId']}")
+            response = jsonify({"error": "Trainee not found"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 404
+
+        school = next((s for s in users_data.get('schools', []) if s['id'] == data['schoolId']), None)
+        if not school:
+            logger.error(f"School not found: {data['schoolId']}")
+            response = jsonify({"error": "School not found"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 404
+
+        supervisor = next((s for s in users_data.get('supervisor', []) if s['id'] == data['supervisorId']), None)
+        if not supervisor:
+            logger.error(f"Supervisor not found: {data['supervisorId']}")
+            response = jsonify({"error": "Supervisor not found"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 404
+
+        # Validate dates if provided
+        start_date = data.get('startDate', assignment.get('start_date', ''))
+        end_date = data.get('endDate', assignment.get('end_date', ''))
+        if start_date and not is_valid_date(start_date):
+            logger.error(f"Invalid start_date: {start_date}")
+            response = jsonify({"error": "Invalid startDate format, use YYYY-MM-DD"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 400
+        if end_date and not is_valid_date(end_date):
+            logger.error(f"Invalid end_date: {end_date}")
+            response = jsonify({"error": "Invalid endDate format, use YYYY-MM-DD"})
+            
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 400
+
+        # Update assignment
+        with lock:
+            updated_assignment = {
+                'id': tp_assignment_id,
+                'traineeId': assignment['traineeId'],
+                'schoolId': data['schoolId'],
+                'supervisorId': data['supervisorId'],
+                'start_date': start_date,
+                'end_date': end_date,
+                'createdAt': assignment.get('createdAt', datetime.now(timezone.utc).isoformat() + 'Z'),
+                'updatedAt': datetime.now(timezone.utc).isoformat() + 'Z'
+            }
+
+            # Replace old assignment
+            users_data['tp_assignments'] = [
+                updated_assignment if a['id'] == tp_assignment_id else a
+                for a in users_data.get('tp_assignments', [])
+            ]
+
+            # Fetch names for notifications
+            trainee_name = f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip()
+            supervisor_name = f"{supervisor.get('name', '')} {supervisor.get('surname', '')}".strip()
+            school_name = school.get('name', '')
+
+            # Create notifications
+            notifications = users_data.setdefault('notifications', [])
+            now = datetime.now(timezone.utc).isoformat() + 'Z'
+            trainee_notification = {
+                'id': f'notif-{uuid.uuid4()}',
+                'user_id': data['traineeId'],
+                'initiator_id': decoded['identifier'],
+                'type': 'ASSIGNMENT',
+                'priority': 'HIGH',
+                'message': f'Your TP assignment has been updated: School: {school_name}, Supervisor: {supervisor_name}, Start Date: {start_date or "N/A"}, End Date: {end_date or "N/A"}.',
+                'created_at': now,
+                'read_status': False
+            }
+            supervisor_notification = {
+                'id': f'notif-{uuid.uuid4()}',
+                'user_id': data['supervisorId'],
+                'initiator_id': decoded['identifier'],
+                'type': 'ASSIGNMENT',
+                'priority': 'MEDIUM',
+                'message': f'Your supervision assignment for {trainee_name} at {school_name} has been updated: Start Date: {start_date or "N/A"}, End Date: {end_date or "N/A"}.',
+                'created_at': now,
+                'read_status': False
+            }
+            notifications.extend([trainee_notification, supervisor_notification])
+            users_data['notifications'] = notifications
+
+            # Save changes
+            save_users(users_data)
+
+        logger.info(f"Updated TP assignment {tp_assignment_id} for trainee {data['traineeId']}")
+        response = jsonify({
+            'message': 'TP assignment updated successfully',
+            'assignment': {
+                'id': updated_assignment['id'],
+                'traineeId': updated_assignment['traineeId'],
+                'schoolId': updated_assignment['schoolId'],
+                'supervisorId': updated_assignment['supervisorId'],
+                'startDate': updated_assignment['start_date'],
+                'endDate': updated_assignment['end_date'],
+                'placeOfTP': school_name,
+                'createdAt': updated_assignment['createdAt'],
+                'updatedAt': updated_assignment['updatedAt']
+            },
+            'notifications': [trainee_notification, supervisor_notification]
+        })
+        return response, 200
+
+    except Exception as e:
+        logger.error(f"Error updating TP assignment {tp_assignment_id}: {str(e)}")
+        response = jsonify({"error": "Failed to update TP assignment", "details": str(e)})
+        
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 500
+
+
+
+
+
+
+# @app.route('/api/admin/tp_assignments/<tp_assignment_id>', methods=['PUT', 'OPTIONS'])
+# def update_tp_assignment(tp_assignment_id):
+#     if request.method == 'OPTIONS':
+#         response = jsonify({"status": "ok"})
+#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+#         response.headers['Access-Control-Allow-Credentials'] = 'true'
+#         response.headers['Access-Control-Allow-Methods'] = 'PUT, OPTIONS'
+#         response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+#         return response, 200
+
+#     decoded, error_response = require_auth("admin")
+#     if error_response:
+#         response = jsonify(error_response[0])
+#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+#         response.headers['Access-Control-Allow-Credentials'] = 'true'
+#         return response, error_response[1]
+
+#     try:
+#         data = request.get_json() or {}
+#         required_fields = ['traineeId', 'schoolId', 'supervisorId']
+#         if not all(field in data for field in required_fields):
+#             logger.error(f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}")
+#             response = jsonify({"error": f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}"})
+#             response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+#             response.headers['Access-Control-Allow-Credentials'] = 'true'
+#             return response, 400
+
+#         # ... (rest of the endpoint logic remains unchanged)
+
+#         logger.info(f"Updated TP assignment {tp_assignment_id} for trainee {data['traineeId']}")
+#         response = jsonify({
+#             'message': 'TP assignment updated successfully',
+#             'assignment': {
+#                 'id': updated_assignment['id'],
+#                 'traineeId': updated_assignment['traineeId'],
+#                 'schoolId': updated_assignment['schoolId'],
+#                 'supervisorId': updated_assignment['supervisorId'],
+#                 'startDate': updated_assignment['start_date'],
+#                 'endDate': updated_assignment['end_date'],
+#                 'placeOfTP': school_name,
+#                 'createdAt': updated_assignment['createdAt'],
+#                 'updatedAt': updated_assignment['updatedAt']
+#             },
+#             'notifications': [trainee_notification, supervisor_notification]
+#         })
+#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+#         response.headers['Access-Control-Allow-Credentials'] = 'true'
+#         return response, 200
+
+#     except Exception as e:
+#         logger.error(f"Error updating TP assignment {tp_assignment_id}: {str(e)}")
+#         response = jsonify({"error": "Failed to update TP assignment", "details": str(e)})
+#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+#         response.headers['Access-Control-Allow-Credentials'] = 'true'
+#         return response, 500
 
 
 
@@ -1493,6 +1510,27 @@ def create_tp_assignment():
 
 
 
+@app.route("/api/admin/tp_assignments/<id>", methods=["DELETE", "OPTIONS"])
+def delete_tp_assignment(id):
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
+    decoded, error_response = require_auth("admin")
+    if error_response:
+        return error_response
+    
+    try:
+        assignments = users.get("tp_assignments", [])
+        assignment = next((a for a in assignments if a["id"] == id), None)
+        if not assignment:
+            return jsonify({"error": "Assignment not found"}), 404
+        
+        users["tp_assignments"] = [a for a in assignments if a["id"] != id]
+        save_users(users)
+        return jsonify({"message": "TP Assignment deleted"}), 200
+    except Exception as e:
+        logger.error(f"Error in delete_tp_assignment: {str(e)}")
+        return jsonify({"error": "Failed to delete assignment", "details": str(e)}), 500
 
 
 
@@ -1566,7 +1604,6 @@ def get_supervisors():
     except Exception as e:
         print(f"Error in get_supervisors: {str(e)}")
         return jsonify({"error": "Failed to fetch supervisors", "details": str(e)}), 500
-
 
 
 @app.route("/api/supervisors/<supervisor_id>", methods=["GET"])
@@ -1754,54 +1791,6 @@ def create_supervisor():
     return jsonify({"message": "Supervisor created", "supervisor": sanitized_supervisor}), 201
 
 
-
-
-@app.route("/api/supervisors/<supervisor_id>/lesson-plans", methods=["GET", "OPTIONS"])
-def get_supervisor_lesson_plans(supervisor_id):
-    if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-    
-    decoded, error_response = require_auth()
-    if error_response:
-        logger.debug(f"Auth failed for supervisor ID {supervisor_id}: {error_response.get_json()['error']}")
-        return error_response
-    
-    # Validate supervisor exists
-    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
-    if not supervisor:
-        logger.debug(f"Supervisor ID {supervisor_id} not found")
-        return jsonify({"error": "Supervisor not found"}), 404
-    
-    # Access control: Admins or the supervisor themselves
-    if decoded["role"] not in ["admin", "supervisor"]:
-        logger.debug(f"Unauthorized role {decoded['role']} for supervisor ID {supervisor_id}")
-        return jsonify({"error": "Unauthorized"}), 403
-    if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
-        logger.debug(f"Supervisor {decoded['identifier']} attempted to access supervisor ID {supervisor_id}")
-        return jsonify({"error": "Unauthorized: You can only view your own lesson plans"}), 403
-    
-    try:
-        # Get lesson plans for this supervisor
-        lesson_plans = users.get("lesson_plans", [])
-        supervisor_lesson_plans = [
-            lp for lp in lesson_plans
-            if isinstance(lp, dict) and lp.get("supervisorId") == supervisor_id
-        ]
-        
-        # Filter by status if provided
-        status = request.args.get("status")
-        if status:
-            supervisor_lesson_plans = [
-                lp for lp in supervisor_lesson_plans
-                if lp.get("status") == status.upper()
-            ]
-        
-        logger.debug(f"Returning {len(supervisor_lesson_plans)} lesson plans for supervisor ID {supervisor_id}")
-        return jsonify({"lessonPlans": supervisor_lesson_plans}), 200
-    except Exception as e:
-        logger.error(f"Error in GET /api/supervisors/{supervisor_id}/lesson-plans: {str(e)}")
-        return jsonify({"error": "Failed to fetch lesson plans", "details": str(e)}), 500
-
 @app.route("/api/lessons/supervisor/<supervisor_id>", methods=["GET"])
 def get_supervisor_lessons(supervisor_id):
     decoded, error_response = require_auth("admin")
@@ -1812,6 +1801,7 @@ def get_supervisor_lessons(supervisor_id):
     lessons = [
         {"id": 1, "supervisorId": supervisor_id, "className": "Class 5A", "subject": "Math", "startTime": "2025-04-07T09:00:00Z", "endTime": "2025-04-07T10:00:00Z"}, ]
     return jsonify({"lessons": lessons}), 200
+
 
 @app.route("/api/lessons/trainee/<trainee_id>", methods=["GET"])
 def get_trainee_lessons(trainee_id):
@@ -1859,6 +1849,8 @@ def get_trainee_lessons(trainee_id):
         "page": page,
         "limit": limit
     }), 200
+
+
 
 
 
@@ -2449,92 +2441,6 @@ def get_supervised_trainees_count(supervisor_id):
 
 
 
-# Updated TP assignment endpoint
-@app.route("/api/admin/tp_assignments/<tp_assignment_id>", methods=["PUT", "OPTIONS"])
-def update_tp_assignment(tp_assignment_id):
-    if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-    
-    decoded, error_response = require_auth("admin")
-    if error_response:
-        return error_response
-    
-    try:
-        data = request.get_json() or {}
-        required_fields = ["schoolId", "supervisorId"]
-        if not all(field in data for field in required_fields):
-            return jsonify({"error": "Missing required fields"}), 400
-        
-        assignments = users.get("tp_assignments", [])
-        assignment = next((a for a in assignments if a["id"] == tp_assignment_id), None)
-        
-        if not assignment:
-            return jsonify({"error": "TP assignment not found"}), 404
-        
-        trainee_id = assignment["traineeId"]
-        trainee = next((t for t in users.get("teacherTrainee", []) if t["id"] == trainee_id), None)
-        if not trainee:
-            return jsonify({"error": "Trainee not found"}), 404
-        
-        school = next((s for s in users.get("schools", []) if s["id"] == data["schoolId"]), None)
-        supervisor = next((s for s in users.get("supervisor", []) if s["id"] == data["supervisorId"]), None)
-        if not (school and supervisor):
-            return jsonify({"error": "Invalid school or supervisor ID"}), 400
-        
-        # Update existing assignment
-        assignment["schoolId"] = data["schoolId"]
-        assignment["supervisorId"] = data["supervisorId"]
-        if "startDate" in data:
-            assignment["start_date"] = data["startDate"]
-        if "endDate" in data:
-            assignment["end_date"] = data["endDate"]
-        
-        users["tp_assignments"] = assignments
-        save_users(users)
-        
-        return jsonify({
-            "message": "TP assignment updated successfully",
-            "assignment": {
-                "id": assignment["id"],
-                "traineeId": assignment["traineeId"],
-                "schoolId": assignment["schoolId"],
-                "supervisorId": assignment["supervisorId"],
-                "startDate": assignment.get("start_date"),
-                "endDate": assignment.get("end_date"),
-                "placeOfTP": school["name"],
-            }
-        }), 200
-    except Exception as e:
-        logger.error(f"Error in update_tp_assignment: {str(e)}")
-        return jsonify({"error": "Failed to update assignment", "details": str(e)}), 500
-
-
-
-
-
-
-
-@app.route("/api/admin/tp_assignments/<id>", methods=["DELETE", "OPTIONS"])
-def delete_tp_assignment(id):
-    if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-    
-    decoded, error_response = require_auth("admin")
-    if error_response:
-        return error_response
-    
-    try:
-        assignments = users.get("tp_assignments", [])
-        assignment = next((a for a in assignments if a["id"] == id), None)
-        if not assignment:
-            return jsonify({"error": "Assignment not found"}), 404
-        
-        users["tp_assignments"] = [a for a in assignments if a["id"] != id]
-        save_users(users)
-        return jsonify({"message": "TP Assignment deleted"}), 200
-    except Exception as e:
-        logger.error(f"Error in delete_tp_assignment: {str(e)}")
-        return jsonify({"error": "Failed to delete assignment", "details": str(e)}), 500
 
 
 @app.route("/api/verify", methods=["GET", "OPTIONS"])
@@ -2683,7 +2589,7 @@ def submit_supervisor_evaluation():
 
 @app.route("/api/admin/student_evaluations", methods=["GET"])
 def student_evaluations():
-    decoded, error_response = require_auth("admin")
+    decoded, error_response = require_auth(["admin","supervisor"])
     if error_response:
         return error_response
     data = users
@@ -2739,6 +2645,9 @@ def student_evaluations():
         "totalCount": total_count,
         "totalPages": (total_count + per_page - 1) // per_page
     }), 200
+
+
+
 
 @app.route("/api/admin/student_evaluations", methods=["POST"])
 def create_student_evaluation():
@@ -3218,403 +3127,6 @@ def parse_time(time_str: str) -> str:
 
 
 
-# @app.route("/api/lesson-plans/<id>", methods=["GET"])
-# def get_lesson_plan(id: str):
-#     logger.debug(f"Received GET request for lesson plan {id}")
-#     try:
-#         auth_header = request.headers.get("Authorization")
-#         if not auth_header or not auth_header.startswith("Bearer "):
-#             logger.error("Missing or invalid Authorization header")
-#             return jsonify({"message": "Missing or invalid Authorization header"}), 401
-
-#         token = auth_header.split("Bearer ")[1]
-#         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-#         if decoded["role"] not in ["teacherTrainee", "supervisor", "admin"]:
-#             logger.error(f"Unauthorized: Invalid role {decoded['role']}")
-#             return jsonify({"message": "Unauthorized: Only trainees, supervisors, or admins can view lesson plans"}), 403
-
-#         users_data = load_users()
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         lesson_plan = next((lp for lp in lesson_plans if lp["id"] == id), None)
-#         if not lesson_plan:
-#             logger.error(f"Lesson plan not found: {id}")
-#             return jsonify({"message": "Lesson plan not found"}), 404
-
-#         if decoded["role"] == "teacherTrainee":
-#             trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#             if not trainee or lesson_plan["traineeId"] != trainee["id"]:
-#                 logger.error(f"Unauthorized: Trainee {decoded['identifier']} does not own lesson plan {id}")
-#                 return jsonify({"message": "Unauthorized: You can only view your own lesson plans"}), 403
-
-#         response_plan = {
-#             "id": lesson_plan["id"],
-#             "traineeId": lesson_plan["traineeId"],
-#             "supervisorId": lesson_plan.get("supervisorId", ""),
-#             "schoolId": lesson_plan.get("schoolId", ""),
-#             "title": lesson_plan.get("title", "Untitled"),
-#             "subject": lesson_plan.get("subject", ""),
-#             "date": lesson_plan.get("date", ""),
-#             "startTime": lesson_plan.get("startTime", ""),
-#             "endTime": lesson_plan.get("endTime", ""),
-#             "objectives": lesson_plan.get("objectives", ""),
-#             "activities": lesson_plan.get("activities", ""),
-#             "resources": lesson_plan.get("resources", ""),
-#             "createdAt": lesson_plan.get("createdAt", ""),
-#             "status": lesson_plan.get("status", "PENDING"),
-#             "aiGenerated": lesson_plan.get("aiGenerated", False),
-#             "traineeName": lesson_plan.get("traineeName", ""),
-#             "supervisorName": lesson_plan.get("supervisorName", ""),
-#             "schoolName": lesson_plan.get("schoolName", ""),
-#             "pdfUrl": lesson_plan.get("pdfUrl", "")
-#         }
-
-#         logger.info(f"Lesson plan {id} retrieved successfully")
-#         response = jsonify({"lessonPlan": response_plan})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-
-#     except jwt.InvalidTokenError as e:
-#         logger.error(f"Token error: {str(e)}")
-#         return jsonify({"message": "Invalid or expired token"}), 401
-#     except Exception as e:
-#         logger.error(f"Error retrieving lesson plan {id}: {str(e)}", exc_info=True)
-#         return jsonify({"message": f"Server error: {str(e)}"}), 500
-
-
-# def sanitize_html(text: str) -> str:
-#     allowed_tags = ['p', 'b', 'i', 'u', 'strong', 'em', 'ul', 'li', 'ol']
-#     return bleach.clean(text, tags=allowed_tags, strip=True)
-
-# def parse_time(time_str: str) -> str:
-#     if not time_str or not isinstance(time_str, str):
-#         logger.debug(f"Invalid time input: {time_str}")
-#         return ""
-#     try:
-#         if len(time_str.split(":")) == 2:
-#             datetime.strptime(time_str, "%H:%M")
-#             return f"{time_str}:00"
-#         elif len(time_str.split(":")) == 3:
-#             datetime.strptime(time_str, "%H:%M:%S")
-#             return time_str
-#         elif "T" in time_str:
-#             parsed = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
-#             return parsed.strftime("%H:%M:%S")
-#         else:
-#             raise ValueError("Invalid time format")
-#     except ValueError as e:
-#         logger.warning(f"Time parsing error: {str(e)} for input: {time_str}")
-#         raise ValueError("Time must be in HH:MM, HH:MM:SS, or ISO format")
-
-
-# @app.route("/api/lesson-plans", methods=["POST"])
-# def create_lesson_plan():
-    
-    
-    
-#     try:
-#         auth_header = request.headers.get("Authorization")
-#         if not auth_header or not auth_header.startswith("Bearer "):
-#             return jsonify({"message": "Missing or invalid Authorization header"}), 401
-        
-#         token = auth_header.split("Bearer ")[1]
-#         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-#         if decoded["role"] != "teacherTrainee":
-#             return jsonify({"message": "Unauthorized: Only teacher trainees can create lesson plans"}), 403
-
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"message": "Trainee not found"}), 404
-
-#         # Check for existing pending lesson plans
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         pending_plans = [lp for lp in lesson_plans if lp["traineeId"] == trainee["id"] and lp["status"] == "PENDING"]
-#         if pending_plans:
-#             logger.warning(f"Trainee {trainee['id']} already has a pending lesson plan: {pending_plans[0]['id']}")
-#             return jsonify({"message": "Cannot create new lesson plan: You already have a pending lesson plan"}), 400
-
-#         data = request.get_json()
-#         if not data:
-#             return jsonify({"message": "Request body must be JSON"}), 400
-
-#         if isinstance(data, list):
-#             if len(data) != 1:
-#                 return jsonify({"message": "Expected a single lesson plan object, not an array"}), 400
-#             data = data[0]
-
-#         required_fields = ["title", "subject", "date", "startTime", "endTime", "objectives", "activities", "resources"]
-#         if not all(field in data for field in required_fields):
-#             return jsonify({"message": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
-
-#         try:
-#             lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
-#         except ValueError:
-#             return jsonify({"message": "Invalid date format, expected YYYY-MM-DD"}), 400
-
-#         try:
-#             start_time = parse_time(data["startTime"])
-#             end_time = parse_time(data["endTime"])
-#             if start_time and end_time:
-#                 start_parts = start_time.split(":")
-#                 end_parts = end_time.split(":")
-#                 start_dt = lesson_date.replace(
-#                     hour=int(start_parts[0]), 
-#                     minute=int(start_parts[1]), 
-#                     second=int(start_parts[2])
-#                 )
-#                 end_dt = lesson_date.replace(
-#                     hour=int(end_parts[0]), 
-#                     minute=int(end_parts[1]), 
-#                     second=int(end_parts[2])
-#                 )
-#                 if end_dt <= start_dt:
-#                     return jsonify({"message": "endTime must be after startTime"}), 400
-#         except ValueError as e:
-#             logger.error(f"Time validation error: {str(e)}")
-#             return jsonify({"message": f"Invalid startTime or endTime format: {str(e)}"}), 400
-
-#         assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
-#         if not assignment:
-#             return jsonify({"message": "No TP assignment found for this trainee"}), 400
-
-#         sanitized_data = {
-#             "title": sanitize_html(data["title"]),
-#             "subject": sanitize_html(data["subject"]),
-#             "objectives": sanitize_html(data["objectives"]),
-#             "activities": sanitize_html(data["activities"]),
-#             "resources": sanitize_html(data["resources"])
-#         }
-
-#         new_lesson_plan = {
-#             "id": str(uuid.uuid4()),
-#             "traineeId": trainee["id"],
-#             "supervisorId": assignment["supervisorId"],
-#             "schoolId": assignment["schoolId"],
-#             "title": sanitized_data["title"],
-#             "subject": sanitized_data["subject"],
-#             "date": data["date"],
-#             "startTime": start_time,
-#             "endTime": end_time,
-#             "objectives": sanitized_data["objectives"],
-#             "activities": sanitized_data["activities"],
-#             "resources": sanitized_data["resources"],
-#             "createdAt": datetime.now(timezone.utc).isoformat() + "Z",
-#             "status": "PENDING",
-#             "aiGenerated": data.get("aiGenerated", False),
-#             "traineeName": f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip(),
-#             "supervisorName": next((f"{s.get('name', '')} {s.get('surname', '')}".strip() for s in users_data.get("supervisor", []) if s["id"] == assignment["supervisorId"]), "Unknown"),
-#             "schoolName": next((s["name"] for s in users_data.get("schools", []) if s["id"] == assignment["schoolId"]), "Unknown")
-#         }
-
-#         users_data["lesson_plans"] = users_data.get("lesson_plans", []) + [new_lesson_plan]
-#         notifications = users_data.get("notifications", [])
-#         notification = {
-#             "id": f"notif-{uuid.uuid4()}",
-#             "user_id": assignment["supervisorId"],
-#             "initiator_id": trainee["regNo"],
-#             "type": "LESSON_PLAN",
-#             "priority": "MEDIUM",
-#             "message": f"New lesson plan submitted by {new_lesson_plan['traineeName']} for {new_lesson_plan['subject']} at {new_lesson_plan['schoolName']}.",
-#             "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#             "read_status": False
-#         }
-#         notifications.append(notification)
-#         users_data["notifications"] = notifications
-
-#         save_users(users_data)
-#         logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 201
-#     except jwt.InvalidTokenError as e:
-#         logger.error(f"Token error: {str(e)}")
-#         return jsonify({"message": "Invalid or expired token"}), 401
-#     except Exception as e:
-#         logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"message": f"Error: {str(e)}"}), 500
-
-# @app.route("/api/lesson-plans/<id>", methods=["PUT"])
-# def update_lesson_plan(id: str):
-#     try:
-#         auth_header = request.headers.get("Authorization")
-#         if not auth_header or not auth_header.startswith("Bearer "):
-#             return jsonify({"message": "Missing or invalid Authorization header"}), 401
-        
-#         token = auth_header.split("Bearer ")[1]
-#         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-#         if decoded["role"] != "teacherTrainee":
-#             return jsonify({"message": "Unauthorized: Only teacher trainees can update lesson plans"}), 403
-
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"message": "Trainee not found"}), 404
-
-#         # Find the lesson plan
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         lesson_plan = next((lp for lp in lesson_plans if lp["id"] == id and lp["traineeId"] == trainee["id"]), None)
-#         if not lesson_plan:
-#             logger.warning(f"Lesson plan {id} not found or not owned by trainee {trainee['id']}")
-#             return jsonify({"message": "Lesson plan not found or you lack permission"}), 404
-
-#         # Check if the lesson plan can be updated
-#         if lesson_plan["status"] not in ["PENDING", "REJECTED"]:
-#             logger.warning(f"Cannot update lesson plan {id}: status is {lesson_plan['status']}")
-#             return jsonify({"message": "Cannot update lesson plan: Only pending or rejected plans can be updated"}), 400
-
-#         data = request.get_json()
-#         if not data:
-#             return jsonify({"message": "Request body must be JSON"}), 400
-
-#         required_fields = ["title", "subject", "date", "startTime", "endTime", "objectives", "activities", "resources"]
-#         if not all(field in data for field in required_fields):
-#             return jsonify({"message": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
-
-#         try:
-#             lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
-#         except ValueError:
-#             return jsonify({"message": "Invalid date format, expected YYYY-MM-DD"}), 400
-
-#         try:
-#             start_time = parse_time(data["startTime"])
-#             end_time = parse_time(data["endTime"])
-#             if start_time and end_time:
-#                 start_parts = start_time.split(":")
-#                 end_parts = end_time.split(":")
-#                 start_dt = lesson_date.replace(
-#                     hour=int(start_parts[0]), 
-#                     minute=int(start_parts[1]), 
-#                     second=int(start_parts[2])
-#                 )
-#                 end_dt = lesson_date.replace(
-#                     hour=int(end_parts[0]), 
-#                     minute=int(end_parts[1]), 
-#                     second=int(end_parts[2])
-#                 )
-#                 if end_dt <= start_dt:
-#                     return jsonify({"message": "endTime must be after startTime"}), 400
-#         except ValueError as e:
-#             logger.error(f"Time validation error: {str(e)}")
-#             return jsonify({"message": f"Invalid startTime or endTime format: {str(e)}"}), 400
-
-#         sanitized_data = {
-#             "title": sanitize_html(data["title"]),
-#             "subject": sanitize_html(data["subject"]),
-#             "objectives": sanitize_html(data["objectives"]),
-#             "activities": sanitize_html(data["activities"]),
-#             "resources": sanitize_html(data["resources"])
-#         }
-
-#         # Update lesson plan fields
-#         lesson_plan.update({
-#             "title": sanitized_data["title"],
-#             "subject": sanitized_data["subject"],
-#             "date": data["date"],
-#             "startTime": start_time,
-#             "endTime": end_time,
-#             "objectives": sanitized_data["objectives"],
-#             "activities": sanitized_data["activities"],
-#             "resources": sanitized_data["resources"],
-#             "status": "PENDING",  # Reset to PENDING if it was REJECTED
-#             "aiGenerated": data.get("aiGenerated", lesson_plan["aiGenerated"])
-#         })
-
-#         # Update users_data with the modified lesson plan
-#         users_data["lesson_plans"] = [lp if lp["id"] != id else lesson_plan for lp in lesson_plans]
-
-#         # Create notification for supervisor
-#         notifications = users_data.get("notifications", [])
-#         notification = {
-#             "id": f"notif-{uuid.uuid4()}",
-#             "user_id": lesson_plan["supervisorId"],
-#             "initiator_id": trainee["regNo"],
-#             "type": "LESSON_PLAN_UPDATE",
-#             "priority": "MEDIUM",
-#             "message": f"Lesson plan updated by {lesson_plan['traineeName']} for {lesson_plan['subject']} at {lesson_plan['schoolName']}.",
-#             "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#             "read_status": False
-#         }
-#         notifications.append(notification)
-#         users_data["notifications"] = notifications
-
-#         save_users(users_data)
-#         logger.info(f"Lesson plan updated: {id} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan updated", "lessonPlan": lesson_plan})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-#     except jwt.InvalidTokenError as e:
-#         logger.error(f"Token error: {str(e)}")
-#         return jsonify({"message": "Invalid or expired token"}), 401
-#     except Exception as e:
-#         logger.error(f"Error updating lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"message": f"Error: {str(e)}"}), 500
-
-# @app.route("/api/lesson-plans/<id>", methods=["DELETE"])
-# def delete_lesson_plan(id: str):
-#     try:
-#         auth_header = request.headers.get("Authorization")
-#         if not auth_header or not auth_header.startswith("Bearer "):
-#             return jsonify({"message": "Missing or invalid Authorization header"}), 401
-        
-#         token = auth_header.split("Bearer ")[1]
-#         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-#         if decoded["role"] != "teacherTrainee":
-#             return jsonify({"message": "Unauthorized: Only teacher trainees can delete lesson plans"}), 403
-
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"message": "Trainee not found"}), 404
-
-#         # Find the lesson plan
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         lesson_plan = next((lp for lp in lesson_plans if lp["id"] == id and lp["traineeId"] == trainee["id"]), None)
-#         if not lesson_plan:
-#             logger.warning(f"Lesson plan {id} not found or not owned by trainee {trainee['id']}")
-#             return jsonify({"message": "Lesson plan not found or you lack permission"}), 404
-
-#         # Check if the lesson plan can be deleted
-#         if lesson_plan["status"] not in ["PENDING", "REJECTED"]:
-#             logger.warning(f"Cannot delete lesson plan {id}: status is {lesson_plan['status']}")
-#             return jsonify({"message": "Cannot delete lesson plan: Only pending or rejected plans can be deleted"}), 400
-
-#         # Remove the lesson plan
-#         users_data["lesson_plans"] = [lp for lp in lesson_plans if lp["id"] != id]
-
-#         # Create notification for supervisor (optional)
-#         notifications = users_data.get("notifications", [])
-#         notification = {
-#             "id": f"notif-{uuid.uuid4()}",
-#             "user_id": lesson_plan["supervisorId"],
-#             "initiator_id": trainee["regNo"],
-#             "type": "LESSON_PLAN_DELETE",
-#             "priority": "LOW",
-#             "message": f"Lesson plan deleted by {lesson_plan['traineeName']} for {lesson_plan['subject']} at {lesson_plan['schoolName']}.",
-#             "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#             "read_status": False
-#         }
-#         notifications.append(notification)
-#         users_data["notifications"] = notifications
-
-#         save_users(users_data)
-#         logger.info(f"Lesson plan deleted: {id} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan deleted"})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-#     except jwt.InvalidTokenError as e:
-#         logger.error(f"Token error: {str(e)}")
-#         return jsonify({"message": "Invalid or expired token"}), 401
-#     except Exception as e:
-#         logger.error(f"Error deleting lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"message": f"Error: {str(e)}"}), 500
-
 
 
 
@@ -3654,11 +3166,6 @@ def get_trainee_profile():
     if request.method == "OPTIONS":
         logger.debug(f"Handling OPTIONS for /api/trainees/me, headers: {request.headers}")
         response = jsonify({"status": "ok"})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        logger.debug(f"OPTIONS response headers for /api/trainees/me: {response.headers}")
         return response, 200
     
     decoded, error_response = require_auth("teacherTrainee")
@@ -3774,6 +3281,12 @@ def get_trainee_profile():
             "sex": t_copy.get("sex", ""),
             "birthday": t_copy.get("birthday", ""),
             "progress": str(t_copy.get("progress", "0")),  # Ensure string for frontend
+            "email": t_copy.get("email", ""),
+            "phone": t_copy.get("phone", ""),
+            "address": t_copy.get("address", ""),
+            "bloodType": t_copy.get("bloodType", ""),
+            "birthday": t_copy.get("birthday", ""),
+            "progress": t_copy.get("progress", ""),
             "img": t_copy.get("img", ""),
             "createdAt": t_copy.get("createdAt", ""),
             "tpAssignment": t_copy["tpAssignment"],
@@ -3789,511 +3302,6 @@ def get_trainee_profile():
     except Exception as e:
         logger.error(f"Error fetching trainee profile: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to fetch trainee profile", "details": str(e)}), 500
-
-
-# @app.route("/api/trainees/<id>", methods=["GET", "OPTIONS"])
-# def get_trainee_by_id(id: str):
-#     if request.method == "OPTIONS":
-#         response = jsonify({"status": "ok"})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         response.headers["Access-Control-Allow-Methods"] = "GET"
-#         response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-#         return response, 200
-    
-#     decoded, error_response = require_auth()
-#     if error_response:
-#         return jsonify(error_response), error_response["status"]
-    
-#     try:
-#         users_data = load_users()
-#         if not users_data:
-#             logger.error("Failed to load users data")
-#             return jsonify({"error": "Internal server error: Users data unavailable"}), 500
-
-#         teacher_trainees = users_data.get("teacherTrainee", [])
-#         if not teacher_trainees:
-#             logger.error("No teacher trainees found in users data")
-#             return jsonify({"error": "Internal server error: No trainees available"}), 500
-
-#         # Lookup trainee by id or regNo
-#         trainee = next((t for t in teacher_trainees if t["id"] == id or t["regNo"] == id), None)
-#         if not trainee:
-#             logger.warning(f"Trainee not found for id/regNo: {id}")
-#             return jsonify({"error": f"Trainee not found: {id}"}), 404
-        
-#         # Authorization check
-#         if decoded["role"] == "teacherTrainee" and trainee["regNo"] != decoded["identifier"]:
-#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access trainee {id}")
-#             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
-        
-#         logger.debug(f"Found trainee: {trainee['id']} for id/regNo: {id}")
-
-#         t_copy = trainee.copy()
-        
-#         # Fetch TP assignment
-#         assignment = get_trainee_assignment(t_copy["id"])
-#         if assignment:
-#             status = "Assigned"
-#             try:
-#                 current_date = datetime.now(timezone.utc).date()
-#                 start_date = None
-#                 end_date = None
-#                 if assignment["startDate"]:
-#                     try:
-#                         start_date = datetime.strptime(assignment["startDate"], "%Y-%m-%d").date()
-#                     except ValueError:
-#                         logger.warning(f"Invalid startDate format for trainee {trainee['id']}: {assignment['startDate']}")
-#                 if assignment["endDate"]:
-#                     try:
-#                         end_date = datetime.strptime(assignment["endDate"], "%Y-%m-%d").date()
-#                     except ValueError:
-#                         logger.warning(f"Invalid endDate format for trainee {trainee['id']}: {assignment['endDate']}")
-                
-#                 if not assignment["supervisorId"] or assignment["supervisorName"] == "Not Assigned" or not assignment["placeOfTP"]:
-#                     status = "Not Assigned"
-#                 elif start_date and end_date:
-#                     if current_date < start_date:
-#                         status = "Pending"
-#                     elif current_date > end_date:
-#                         status = "Completed"
-#             except Exception as e:
-#                 logger.error(f"Error processing TP assignment dates for trainee {trainee['id']}: {str(e)}")
-#                 status = "Not Assigned"
-            
-#             t_copy["tpAssignment"] = {
-#                 "supervisorName": assignment["supervisorName"],
-#                 "placeOfTP": assignment["placeOfTP"],
-#                 "startDate": assignment["startDate"],
-#                 "endDate": assignment["endDate"],
-#                 "status": status
-#             }
-#         else:
-#             t_copy["tpAssignment"] = {
-#                 "supervisorName": "Not Assigned",
-#                 "placeOfTP": "Not Assigned",
-#                 "startDate": "",
-#                 "endDate": "",
-#                 "status": "Not Assigned"
-#             }
-#         logger.debug(f"TP assignment for trainee {trainee['id']}: {t_copy['tpAssignment']}")
-
-#         # Fetch lesson plans
-#         lesson_plans = [
-#             lp for lp in users_data.get("lesson_plans", [])
-#             if lp.get("traineeId") == t_copy["id"]
-#         ]
-#         t_copy["lessonPlans"] = [
-#             {
-#                 "id": lp.get("id", ""),
-#                 "traineeId": lp.get("traineeId", ""),
-#                 "title": lp.get("title", "Untitled"),
-#                 "subject": lp.get("subject", ""),
-#                 "date": lp.get("date", ""),
-#                 "startTime": lp.get("startTime", ""),
-#                 "endTime": lp.get("endTime", ""),
-#                 "objectives": lp.get("objectives", ""),
-#                 "activities": lp.get("activities", ""),
-#                 "resources": lp.get("resources", ""),
-#                 "createdAt": lp.get("createdAt", ""),
-#                 "status": lp.get("status", "PENDING"),
-#                 "pdfUrl": lp.get("pdfUrl", ""),
-#                 "aiGenerated": lp.get("aiGenerated", False),
-#                 "traineeName": lp.get("traineeName", ""),
-#                 "supervisorName": lp.get("supervisorName", ""),
-#                 "schoolName": lp.get("schoolName", "")
-#             }
-#             for lp in lesson_plans
-#         ]
-#         logger.debug(f"Found {len(lesson_plans)} lesson plans for trainee {trainee['id']}")
-
-#         # Sanitize trainee data
-#         safe_trainee = {
-#             "id": t_copy.get("id", ""),
-#             "regNo": t_copy.get("regNo", ""),
-#             "name": t_copy.get("name", ""),
-#             "surname": t_copy.get("surname", ""),
-#             "sex": t_copy.get("sex", ""),
-#             "birthday": t_copy.get("birthday", ""),
-#             "progress": str(t_copy.get("progress", "0")),
-#             "img": t_copy.get("img", ""),
-#             "createdAt": t_copy.get("createdAt", ""),
-#             "tpAssignment": t_copy["tpAssignment"],
-#             "lessonPlans": t_copy["lessonPlans"]
-#         }
-        
-#         logger.info(f"Fetched profile for trainee {id}")
-#         response = jsonify(safe_trainee)
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-    
-#     except Exception as e:
-#         logger.error(f"Error fetching trainee profile for id {id}: {str(e)}", exc_info=True)
-#         return jsonify({"error": "Failed to fetch trainee profile", "details": str(e)}), 500
-
-
-
-
-
-
-# @app.route("/api/lesson-plans", methods=["POST"])
-# @_require_auth(["teacherTrainee"])
-# def create_lesson_plan(decoded):
-#     try:
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"error": "Trainee not found"}), 404
-
-#         # Check for existing pending lesson plans
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         pending_plans = [lp for lp in lesson_plans if lp["traineeId"] == trainee["id"] and lp["status"] == "PENDING"]
-#         if pending_plans:
-#             logger.warning(f"Trainee {trainee['id']} already has a pending lesson plan: {pending_plans[0]['id']}")
-#             return jsonify({"error": "You already have a pending lesson plan. Please submit or delete it first."}), 400
-
-#         data = request.get_json()
-#         if not data:
-#             return jsonify({"error": "Request body must be JSON"}), 400
-
-#         required_fields = ["title", "subject", "date", "startTime", "endTime", "objectives", "activities", "resources"]
-#         if not all(field in data for field in required_fields):
-#             return jsonify({"error": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
-
-#         try:
-#             lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
-#         except ValueError:
-#             return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
-
-#         start_time = parse_time(data["startTime"])
-#         end_time = parse_time(data["endTime"])
-#         if not start_time or not end_time:
-#             return jsonify({"error": "Invalid time format, expected HH:MM"}), 400
-
-#         start_parts = start_time.split(":")
-#         end_parts = end_time.split(":")
-#         start_dt = lesson_date.replace(
-#             hour=int(start_parts[0]), minute=int(start_parts[1]), second=0
-#         )
-#         end_dt = lesson_date.replace(
-#             hour=int(end_parts[0]), minute=int(end_parts[1]), second=0
-#         )
-#         if end_dt <= start_dt:
-#             return jsonify({"error": "End time must be after start time"}), 400
-
-#         assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
-#         if not assignment:
-#             return jsonify({"error": "No TP assignment found for this trainee"}), 400
-
-#         sanitized_data = {
-#             "title": sanitize_html(data["title"]),
-#             "subject": sanitize_html(data["subject"]),
-#             "objectives": sanitize_html(data["objectives"]),
-#             "activities": sanitize_html(data["activities"]),
-#             "resources": sanitize_html(data["resources"])
-#         }
-
-#         new_lesson_plan = {
-#             "id": str(uuid.uuid4()),
-#             "traineeId": trainee["id"],
-#             "supervisorId": assignment["supervisorId"],
-#             "schoolId": assignment["schoolId"],
-#             "title": sanitized_data["title"],
-#             "subject": sanitized_data["subject"],
-#             "date": data["date"],
-#             "startTime": start_time,
-#             "endTime": end_time,
-#             "objectives": sanitized_data["objectives"],
-#             "activities": sanitized_data["activities"],
-#             "resources": sanitized_data["resources"],
-#             "createdAt": datetime.now(timezone.utc).isoformat() + "Z",
-#             "status": "PENDING",
-#             "aiGenerated": data.get("aiGenerated", False),
-#             "traineeName": f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip(),
-#             "supervisorName": next((f"{s.get('name', '')} {s.get('surname', '')}".strip() for s in users_data.get("supervisor", []) if s["id"] == assignment["supervisorId"]), "Unknown"),
-#             "schoolName": next((s["name"] for s in users_data.get("schools", []) if s["id"] == assignment["schoolId"]), "Unknown")
-#         }
-
-#         with lock:
-#             users_data["lesson_plans"] = users_data.get("lesson_plans", []) + [new_lesson_plan]
-#             notifications = users_data.get("notifications", [])
-#             notification = {
-#                 "id": f"notif-{uuid.uuid4()}",
-#                 "user_id": assignment["supervisorId"],
-#                 "initiator_id": trainee["regNo"],
-#                 "type": "LESSON_PLAN",
-#                 "priority": "MEDIUM",
-#                 "message": f"New lesson plan submitted by {new_lesson_plan['traineeName']} for {new_lesson_plan['subject']} at {new_lesson_plan['schoolName']}.",
-#                 "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#                 "read_status": False
-#             }
-#             notifications.append(notification)
-#             users_data["notifications"] = notifications
-#             save_users(users_data)
-
-#         logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 201
-#     except Exception as e:
-#         logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"error": f"Error: {str(e)}"}), 500
-
-# @app.route("/api/lesson-plans/<id>", methods=["GET"])
-# @_require_auth(["teacherTrainee", "supervisor", "admin"])
-# def get_lesson_plan(decoded, id: str):
-#     try:
-#         users_data = load_users()
-#         lesson_plan = next((lp for lp in users_data.get("lesson_plans", []) if lp["id"] == id), None)
-#         if not lesson_plan:
-#             return jsonify({"error": "Lesson plan not found"}), 404
-#         if (decoded["role"] == "teacherTrainee" and lesson_plan["traineeId"] != decoded["identifier"]) or \
-#            (decoded["role"] == "supervisor" and lesson_plan["supervisorId"] != decoded["identifier"]):
-#             return jsonify({"error": "Unauthorized: You lack permission to view this lesson plan"}), 403
-#         return jsonify(lesson_plan), 200
-#     except Exception as e:
-#         logger.error(f"Error fetching lesson plan {id}: {str(e)}", exc_info=True)
-#         return jsonify({"error": f"Error: {str(e)}"}), 500
-
-# @app.route("/api/lesson-plans/<id>", methods=["PUT"])
-# @_require_auth(["teacherTrainee"])
-# def update_lesson_plan(decoded, id: str):
-#     try:
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"error": "Trainee not found"}), 404
-
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         lesson_plan = next((lp for lp in lesson_plans if lp["id"] == id and lp["traineeId"] == trainee["id"]), None)
-#         if not lesson_plan:
-#             logger.warning(f"Lesson plan {id} not found or not owned by trainee {trainee['id']}")
-#             return jsonify({"error": "Lesson plan not found or you lack permission"}), 404
-
-#         if lesson_plan["status"] not in ["PENDING", "REJECTED"]:
-#             logger.warning(f"Cannot update lesson plan {id}: status is {lesson_plan['status']}")
-#             return jsonify({"error": "Only pending or rejected lesson plans can be updated"}), 400
-
-#         data = request.get_json()
-#         if not data:
-#             return jsonify({"error": "Request body must be JSON"}), 400
-
-#         required_fields = ["title", "subject", "date", "startTime", "endTime", "objectives", "activities", "resources"]
-#         if not all(field in data for field in required_fields):
-#             return jsonify({"error": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
-
-#         try:
-#             lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
-#         except ValueError:
-#             return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
-
-#         start_time = parse_time(data["startTime"])
-#         end_time = parse_time(data["endTime"])
-#         if not start_time or not end_time:
-#             return jsonify({"error": "Invalid time format, expected HH:MM"}), 400
-
-#         start_parts = start_time.split(":")
-#         end_parts = end_time.split(":")
-#         start_dt = lesson_date.replace(
-#             hour=int(start_parts[0]), minute=int(start_parts[1]), second=0
-#         )
-#         end_dt = lesson_date.replace(
-#             hour=int(end_parts[0]), minute=int(end_parts[1]), second=0
-#         )
-#         if end_dt <= start_dt:
-#             return jsonify({"error": "End time must be after start time"}), 400
-
-#         sanitized_data = {
-#             "title": sanitize_html(data["title"]),
-#             "subject": sanitize_html(data["subject"]),
-#             "objectives": sanitize_html(data["objectives"]),
-#             "activities": sanitize_html(data["activities"]),
-#             "resources": sanitize_html(data["resources"])
-#         }
-
-#         lesson_plan.update({
-#             "title": sanitized_data["title"],
-#             "subject": sanitized_data["subject"],
-#             "date": data["date"],
-#             "startTime": start_time,
-#             "endTime": end_time,
-#             "objectives": sanitized_data["objectives"],
-#             "activities": sanitized_data["activities"],
-#             "resources": sanitized_data["resources"],
-#             "status": "PENDING",
-#             "aiGenerated": data.get("aiGenerated", lesson_plan["aiGenerated"])
-#         })
-
-#         with lock:
-#             users_data["lesson_plans"] = [lp if lp["id"] != id else lesson_plan for lp in lesson_plans]
-#             notifications = users_data.get("notifications", [])
-#             notification = {
-#                 "id": f"notif-{uuid.uuid4()}",
-#                 "user_id": lesson_plan["supervisorId"],
-#                 "initiator_id": trainee["regNo"],
-#                 "type": "LESSON_PLAN_UPDATE",
-#                 "priority": "MEDIUM",
-#                 "message": f"Lesson plan updated by {lesson_plan['traineeName']} for {lesson_plan['subject']} at {lesson_plan['schoolName']}.",
-#                 "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#                 "read_status": False
-#             }
-#             notifications.append(notification)
-#             users_data["notifications"] = notifications
-#             save_users(users_data)
-
-#         logger.info(f"Lesson plan updated: {id} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan updated", "lessonPlan": lesson_plan})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-#     except Exception as e:
-#         logger.error(f"Error updating lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"error": f"Error: {str(e)}"}), 500
-
-# @app.route("/api/lesson-plans/<id>", methods=["DELETE"])
-# @_require_auth(["teacherTrainee"])
-# def delete_lesson_plan(decoded, id: str):
-#     try:
-#         users_data = load_users()
-#         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#         if not trainee:
-#             logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-#             return jsonify({"error": "Trainee not found"}), 404
-
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         lesson_plan = next((lp for lp in lesson_plans if lp["id"] == id and lp["traineeId"] == trainee["id"]), None)
-#         if not lesson_plan:
-#             logger.warning(f"Lesson plan {id} not found or not owned by trainee {trainee['id']}")
-#             return jsonify({"error": "Lesson plan not found or you lack permission"}), 404
-
-#         if lesson_plan["status"] not in ["PENDING", "REJECTED"]:
-#             logger.warning(f"Cannot delete lesson plan {id}: status is {lesson_plan['status']}")
-#             return jsonify({"error": "Only pending or rejected lesson plans can be deleted"}), 400
-
-#         with lock:
-#             users_data["lesson_plans"] = [lp for lp in lesson_plans if lp["id"] != id]
-#             notifications = users_data.get("notifications", [])
-#             notification = {
-#                 "id": f"notif-{uuid.uuid4()}",
-#                 "user_id": lesson_plan["supervisorId"],
-#                 "initiator_id": trainee["regNo"],
-#                 "type": "LESSON_PLAN_DELETE",
-#                 "priority": "LOW",
-#                 "message": f"Lesson plan deleted by {lesson_plan['traineeName']} for {lesson_plan['subject']} at {lesson_plan['schoolName']}.",
-#                 "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-#                 "read_status": False
-#             }
-#             notifications.append(notification)
-#             users_data["notifications"] = notifications
-#             save_users(users_data)
-
-#         logger.info(f"Lesson plan deleted: {id} by trainee {trainee['regNo']}")
-#         response = jsonify({"message": "Lesson plan deleted"})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-#     except Exception as e:
-#         logger.error(f"Error deleting lesson plan: {str(e)}", exc_info=True)
-#         return jsonify({"error": f"Error: {str(e)}"}), 500
-
-
-
-# @app.route("/api/lesson-plans", methods=["GET"])
-# @_require_auth(["teacherTrainee", "supervisor", "admin"])
-# def get_lesson_plans(decoded):
-#     try:
-#         users_data = load_users()
-#         lesson_plans = users_data.get("lesson_plans", [])
-#         page = int(request.args.get("page", 1))
-#         limit = int(request.args.get("limit", 10))
-#         trainee_id = request.args.get("traineeId")  # Only for admin/supervisor
-#         search = request.args.get("search", "").lower()
-#         subject = request.args.get("subject", "")
-#         status = request.args.get("status", "")
-
-#         # Determine trainee ID for filtering
-#         trainee_id_for_filter = None
-#         if decoded["role"] == "teacherTrainee":
-#             trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-#             if not trainee:
-#                 logger.error(f"Trainee not found for regNo: {decoded['identifier']}")
-#                 return jsonify({"error": "Trainee not found"}), 404
-#             trainee_id_for_filter = str(trainee["id"])  # Ensure string
-#             logger.info(f"Mapped regNo {decoded['identifier']} to trainee ID {trainee_id_for_filter}")
-#         elif decoded["role"] in ["admin", "supervisor"] and trainee_id:
-#             trainee_id_for_filter = str(trainee_id)  # Ensure string
-
-#         logger.info(f"Fetching lesson plans for user: {decoded['identifier']}, role: {decoded['role']}, "
-#                     f"traineeId: {trainee_id or 'none'}, search: {search or 'none'}, subject: {subject or 'none'}, "
-#                     f"status: {status or 'none'}, mapped_trainee_id: {trainee_id_for_filter or 'none'}")
-
-#         # Role-based filtering
-#         filtered_plans = []
-#         for lp in lesson_plans:
-#             # Ensure critical fields are strings
-#             lp = {
-#                 **lp,
-#                 "id": str(lp.get("id", "")),
-#                 "traineeId": str(lp.get("traineeId", "")),
-#                 "supervisorId": str(lp.get("supervisorId", "")),
-#                 "schoolId": str(lp.get("schoolId", "")),
-#                 "status": str(lp.get("status", "PENDING")),
-#                 "aiGenerated": bool(lp.get("aiGenerated", False)),
-#                 "pdfUrl": lp.get("pdfUrl", None) if lp.get("pdfUrl") is not None else None,
-#             }
-#             if decoded["role"] == "teacherTrainee":
-#                 if lp["traineeId"] == trainee_id_for_filter:
-#                     filtered_plans.append(lp)
-#             elif decoded["role"] == "supervisor":
-#                 if lp["supervisorId"] == decoded["identifier"]:
-#                     if not trainee_id_for_filter or lp["traineeId"] == trainee_id_for_filter:
-#                         filtered_plans.append(lp)
-#             elif decoded["role"] == "admin":
-#                 if not trainee_id_for_filter or lp["traineeId"] == trainee_id_for_filter:
-#                     filtered_plans.append(lp)
-
-#         # Additional filters
-#         if search:
-#             filtered_plans = [
-#                 lp for lp in filtered_plans
-#                 if search in lp.get("title", "").lower() or search in lp.get("subject", "").lower()
-#             ]
-#         if subject:
-#             filtered_plans = [lp for lp in filtered_plans if lp.get("subject", "") == subject]
-#         if status:
-#             filtered_plans = [lp for lp in filtered_plans if lp.get("status", "") == status]
-
-#         # Pagination
-#         total = len(filtered_plans)
-#         total_pages = max(1, (total + limit - 1) // limit)  # Ensure totalPages >= 1
-#         start = (page - 1) * limit
-#         end = start + limit
-#         paginated_plans = filtered_plans[start:end]
-
-#         logger.info(f"Returning {len(paginated_plans)} lesson plans, total: {total}, pages: {total_pages}")
-
-#         return jsonify({
-#             "lessonPlans": paginated_plans,
-#             "totalCount": total,
-#             "totalPages": total_pages
-#         }), 200
-#     except Exception as e:
-#         logger.error(f"Error fetching lesson plans: {str(e)}", exc_info=True)
-#         return jsonify({"error": f"Error: {str(e)}"}), 500
-
-
-
-
-
-
-
-
-
-
 
 
 def normalize_time(time_str):
@@ -4323,9 +3331,129 @@ def normalize_datetime(dt_str):
     except (ValueError, TypeError):
         return datetime.now(timezone.utc).isoformat() + "Z"
 
+
+
+
+
+
+
+
+
 @app.route("/api/lesson-plans", methods=["POST"])
 @_require_auth(["teacherTrainee"])
 def create_lesson_plan(decoded):
+    try:
+        users_data = load_users()
+        trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
+        if not trainee:
+            logger.error(f"Trainee not found for regNo: {decoded['identifier']}")
+            return jsonify({"error": "Trainee not found"}), 404
+
+        # Check for existing pending lesson plans
+        lesson_plans = users_data.get("lesson_plans", [])
+        pending_plans = [lp for lp in lesson_plans if lp["traineeId"] == trainee["id"] and lp["status"] == "PENDING"]
+        if pending_plans:
+            logger.warning(f"Trainee {trainee['id']} already has a pending lesson plan: {pending_plans[0]['id']}")
+            return jsonify({"error": "You already have a pending lesson plan. Please submit or delete it first."}), 400
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Request body must be JSON"}), 400
+
+        required_fields = ["title", "subject", "date", "objectives", "activities", "resources"]
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
+
+        try:
+            lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
+
+        # Normalize times, make optional
+        start_time = normalize_time(data.get("startTime")) if data.get("startTime") else None
+        end_time = normalize_time(data.get("endTime")) if data.get("endTime") else None
+        if start_time and end_time:
+            start_parts = start_time.split(":")
+            end_parts = end_time.split(":")
+            start_dt = lesson_date.replace(hour=int(start_parts[0]), minute=int(start_parts[1]), second=0)
+            end_dt = lesson_date.replace(hour=int(end_parts[0]), minute=int(end_parts[1]), second=0)
+            if end_dt <= start_dt:
+                return jsonify({"error": "End time must be after start time"}), 400
+
+        assignment = get_trainee_assignment(trainee["id"])
+        if not assignment:
+            return jsonify({"error": "No TP assignment found for this trainee"}), 400
+
+        sanitized_data = {
+            "title": sanitize_html(data["title"]),
+            "subject": sanitize_html(data["subject"]),
+            "objectives": sanitize_html(data["objectives"]),
+            "class": sanitize_html(data["class"]),
+            "activities": sanitize_html(data["activities"]),
+            "resources": sanitize_html(data["resources"])
+        }
+
+        new_lesson_plan = {
+            "id": "lp" + str(uuid.uuid4()),
+            "traineeId": str(trainee["id"]),
+            "supervisorId": str(assignment["supervisorId"]),
+            "schoolId": str(assignment["schoolId"]),
+            "title": sanitized_data["title"],
+            "subject": sanitized_data["subject"],
+            "class": sanitized_data["class"],
+            "date": data["date"],
+            "startTime": start_time,
+            "endTime": end_time,
+            "objectives": sanitized_data["objectives"],
+            "activities": sanitized_data["activities"],
+            "resources": sanitized_data["resources"],
+            "createdAt": datetime.now(timezone.utc).isoformat() + "Z",
+            "status": "PENDING",
+            "aiGenerated": bool(data.get("aiGenerated", False)),
+            "traineeName": f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip(),
+            "supervisorName": assignment["supervisorName"],
+            "schoolName": assignment["schoolName"],
+            "pdfUrl": data.get('pdfUrl')
+        }
+
+        with lock:
+            users_data["lesson_plans"] = lesson_plans + [new_lesson_plan]
+            notifications = users_data.get("notifications", [])
+            notification = {
+                "id": f"notif-{uuid.uuid4()}",
+                "user_id": assignment["supervisorId"],
+                "initiator_id": trainee["id"],
+                "type": "LESSON_PLAN",
+                "priority": "MEDIUM",
+                "message": f"New lesson plan submitted by {new_lesson_plan['traineeName']} for {new_lesson_plan['subject']} at {new_lesson_plan['schoolName']}.",
+                "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+                "read_status": False
+            }
+            notifications.append(notification)
+            users_data["notifications"] = notifications
+            save_users(users_data)
+
+        logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['id']}")
+        response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 201
+    except Exception as e:
+        logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Error: {str(e)}"}), 500
+
+
+
+
+
+
+
+
+
+
+# @app.route("/api/lesson-plans", methods=["POST"])
+# @_require_auth(["teacherTrainee"])
+# def create_lesson_plan(decoded):
     try:
         users_data = load_users()
         trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
@@ -4364,7 +3492,10 @@ def create_lesson_plan(decoded):
             if end_dt <= start_dt:
                 return jsonify({"error": "End time must be after start time"}), 400
 
-        assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
+        # assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
+ 
+        assignment=get_trainee_assignment(trainee["id"])
+ 
         if not assignment:
             return jsonify({"error": "No TP assignment found for this trainee"}), 400
 
@@ -4499,13 +3630,15 @@ def update_lesson_plan(decoded, id: str):
             notification = {
                 "id": f"notif-{uuid.uuid4()}",
                 "user_id": lesson_plan["supervisorId"],
-                "initiator_id": trainee["regNo"],
+                "initiator_id": trainee["id"],
                 "type": "LESSON_PLAN_UPDATE",
                 "priority": "MEDIUM",
                 "message": f"Lesson plan updated by {lesson_plan['traineeName']} for {lesson_plan['subject']} at {lesson_plan['schoolName']}.",
                 "created_at": datetime.now(timezone.utc).isoformat() + "Z",
                 "read_status": False
             }
+                  
+            
             notifications.append(notification)
             users_data["notifications"] = notifications
             save_users(users_data)
@@ -4518,6 +3651,8 @@ def update_lesson_plan(decoded, id: str):
     except Exception as e:
         logger.error(f"Error updating lesson plan: {str(e)}", exc_info=True)
         return jsonify({"error": f"Error: {str(e)}"}), 500
+
+
 
 @app.route("/api/lesson-plans/<id>", methods=["DELETE"])
 @_require_auth(["teacherTrainee"])
@@ -4567,6 +3702,9 @@ def delete_lesson_plan(decoded, id: str):
 
 
 
+
+
+
 @app.route("/api/lesson-plans", methods=["GET"])
 @_require_auth(["teacherTrainee", "supervisor", "admin"])
 def get_lesson_plans(decoded):
@@ -4575,12 +3713,12 @@ def get_lesson_plans(decoded):
         lesson_plans = users_data.get("lesson_plans", [])
         page = request.args.get("page", 1)
         limit = request.args.get("limit", 10)
-        trainee_id = request.args.get("traineeId")  # Only for admin/supervisor
+        trainee_id = request.args.get("traineeId")
+        supervisor_id = request.args.get("supervisorId")  # New parameter
         search = request.args.get("search", "").lower()
         subject = request.args.get("subject", "")
         status = request.args.get("status", "").upper()
 
-        # Validate inputs
         try:
             page = int(page)
             limit = int(limit)
@@ -4590,35 +3728,38 @@ def get_lesson_plans(decoded):
             logger.error(f"Invalid page ({page}) or limit ({limit})")
             return jsonify({"error": "Page and limit must be positive integers"}), 400
 
-        if status and status not in ["PENDING", "SUBMITTED", "APPROVED", "REJECTED"]:
+        valid_statuses = ["PENDING", "SUBMITTED", "APPROVED", "REJECTED"]
+        status_list = status.split(",") if status else []
+        if status_list and any(s not in valid_statuses for s in status_list):
             logger.error(f"Invalid status: {status}")
             return jsonify({"error": "Invalid status. Must be PENDING, SUBMITTED, APPROVED, or REJECTED"}), 400
 
-        # Determine trainee ID for filtering
         trainee_id_for_filter = None
+        supervisor_id_for_filter = supervisor_id or (decoded["identifier"] if decoded["role"] == "supervisor" else None)
         if decoded["role"] == "teacherTrainee":
             trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
             if not trainee:
                 logger.error(f"Trainee not found for regNo: {decoded['identifier']}")
                 return jsonify({"error": "Trainee not found"}), 404
             trainee_id_for_filter = str(trainee["id"])
-            logger.info(f"Mapped regNo {decoded['identifier']} to trainee ID {trainee_id_for_filter}")
         elif decoded["role"] in ["admin", "supervisor"] and trainee_id:
-            # Validate traineeId
             trainee = next((t for t in users_data.get("teacherTrainee", []) if str(t["id"]) == trainee_id), None)
             if not trainee:
                 logger.error(f"Invalid traineeId: {trainee_id}")
                 return jsonify({"error": "Trainee not found for provided traineeId"}), 404
             trainee_id_for_filter = str(trainee_id)
 
-        logger.info(f"Fetching lesson plans for user: {decoded['identifier']}, role: {decoded['role']}, "
-                    f"traineeId: {trainee_id or 'none'}, search: {search or 'none'}, subject: {subject or 'none'}, "
-                    f"status: {status or 'none'}, mapped_trainee_id: {trainee_id_for_filter or 'none'}")
+        # Access control for supervisorId
+        if supervisor_id and decoded["role"] == "supervisor" and supervisor_id != decoded["identifier"]:
+            logger.warning(f"Unauthorized: Supervisor {decoded['identifier']} tried to access supervisorId {supervisor_id}")
+            return jsonify({"error": "Unauthorized: You can only access your own lesson plans"}), 403
 
-        # Normalize and filter lesson plans
+        logger.info(f"Fetching lesson plans for user: {decoded['identifier']}, role: {decoded['role']}, "
+                    f"traineeId: {trainee_id or 'none'}, supervisorId: {supervisor_id or 'none'}, "
+                    f"search: {search or 'none'}, subject: {subject or 'none'}, status: {status or 'none'}")
+
         filtered_plans = []
         for lp in lesson_plans:
-            # Normalize fields
             normalized_plan = {
                 "id": str(lp.get("id", "")) or None,
                 "traineeId": str(lp.get("traineeId", "")) or None,
@@ -4628,12 +3769,12 @@ def get_lesson_plans(decoded):
                 "subject": str(lp.get("subject", "")) or None,
                 "class": str(lp.get("class", "")) or None,
                 "date": str(lp.get("date", "")) or None,
-                "startTime": normalize_time(lp.get("startTime")),  # Normalize to HH:mm:ss or None
-                "endTime": normalize_time(lp.get("endTime")),  # Normalize to HH:mm:ss or None
+                "startTime": normalize_time(lp.get("startTime")),
+                "endTime": normalize_time(lp.get("endTime")),
                 "objectives": str(lp.get("objectives", "")) or None,
                 "activities": str(lp.get("activities", "")) or None,
                 "resources": str(lp.get("resources", "")) or None,
-                "createdAt": normalize_datetime(lp.get("createdAt")),  # Normalize to ISO format or None
+                "createdAt": normalize_datetime(lp.get("createdAt")),
                 "status": str(lp.get("status", "PENDING")).upper(),
                 "aiGenerated": bool(lp.get("aiGenerated", False)),
                 "traineeName": str(lp.get("traineeName", "")) or None,
@@ -4642,19 +3783,18 @@ def get_lesson_plans(decoded):
                 "pdfUrl": str(lp.get("pdfUrl", "")) if lp.get("pdfUrl") else None,
             }
 
-            # Role-based filtering
             if decoded["role"] == "teacherTrainee":
                 if normalized_plan["traineeId"] == trainee_id_for_filter:
                     filtered_plans.append(normalized_plan)
             elif decoded["role"] == "supervisor":
-                if normalized_plan["supervisorId"] == decoded["identifier"]:
+                if normalized_plan["supervisorId"] == supervisor_id_for_filter:
                     if not trainee_id_for_filter or normalized_plan["traineeId"] == trainee_id_for_filter:
                         filtered_plans.append(normalized_plan)
             elif decoded["role"] == "admin":
-                if not trainee_id_for_filter or normalized_plan["traineeId"] == trainee_id_for_filter:
-                    filtered_plans.append(normalized_plan)
+                if not supervisor_id_for_filter or normalized_plan["supervisorId"] == supervisor_id_for_filter:
+                    if not trainee_id_for_filter or normalized_plan["traineeId"] == trainee_id_for_filter:
+                        filtered_plans.append(normalized_plan)
 
-        # Additional filters
         if search:
             filtered_plans = [
                 lp for lp in filtered_plans
@@ -4663,10 +3803,9 @@ def get_lesson_plans(decoded):
             ]
         if subject:
             filtered_plans = [lp for lp in filtered_plans if lp.get("subject") == subject]
-        if status:
-            filtered_plans = [lp for lp in filtered_plans if lp.get("status") == status]
+        if status_list:
+            filtered_plans = [lp for lp in filtered_plans if lp.get("status") in status_list]
 
-        # Pagination
         total = len(filtered_plans)
         total_pages = max(1, (total + limit - 1) // limit)
         start = (page - 1) * limit
@@ -4675,15 +3814,17 @@ def get_lesson_plans(decoded):
 
         logger.info(f"Returning {len(paginated_plans)} lesson plans, total: {total}, pages: {total_pages}")
 
-        return jsonify({
+        response = jsonify({
             "lessonPlans": paginated_plans,
             "totalCount": total,
             "totalPages": total_pages
-        }), 200
+        })
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 200
     except Exception as e:
         logger.error(f"Error fetching lesson plans: {str(e)}", exc_info=True)
         return jsonify({"error": f"Error: {str(e)}"}), 500
-
 
 
 @app.route("/api/trainees/<trainee_id>/lesson-plans", methods=["GET", "OPTIONS"])
@@ -4736,21 +3877,15 @@ def get_trainee_lesson_plans(decoded,trainee_id):
 
 
 @app.route("/api/trainees/<id>", methods=["GET",])
-@_require_auth(["teacherTrainee","admin"])
-def get_trainee_profiles(decoded,id):
+# @_require_auth(["teacherTrainee","admin"])
+def get_trainee_profiles(id):
     if request.method == "OPTIONS":
-        logger.debug(f"Handling OPTIONS for /api/trainees/me, headers: {request.headers}")
-        response = jsonify({"status": "ok"})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        logger.debug(f"OPTIONS response headers for /api/trainees/me: {response.headers}")
-        return response, 200
+        return jsonify({"status": "ok"}), 200
+
     
-    # decoded, error_response = require_auth(["admin"])
-    # if error_response:
-    #     return jsonify(error_response), error_response["status"]
+    decoded, error_response = require_auth(["teacherTrainee","admin"])
+    if error_response:
+        return jsonify(error_response), error_response["status"]
     
     try:
         
@@ -4792,6 +3927,7 @@ def get_trainee_profiles(decoded,id):
         
         # Get TP assignment details with enhanced status logic
         assignment = get_trainee_assignment(t_copy["id"])
+        print(assignment)
         if assignment:
             status = "Assigned"
             try:
@@ -4895,55 +4031,379 @@ def get_trainee_profiles(decoded,id):
         return jsonify({"error": "Failed to fetch trainee profile", "details": str(e)}), 500
 
 
-# Supervisor Lesson Plan Review Endpoint
-@app.route("/api/supervisors/<supervisor_id>/lesson-plans/<lesson_plan_id>/review", methods=["PUT"])
-def review_lesson_plan(supervisor_id, lesson_plan_id):
-    decoded, error_response = require_auth("supervisor")
+@app.route("/api/supervisors/<supervisor_id>/lesson-plans", methods=["GET", "OPTIONS"])
+def get_supervisor_lesson_plans(supervisor_id):
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
+    decoded, error_response = require_auth()
+    if error_response:
+        logger.debug(f"Auth failed for supervisor ID {supervisor_id}: {error_response.get_json()['error']}")
+        return error_response
+    
+    # Validate supervisor exists
+    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
+    if not supervisor:
+        logger.debug(f"Supervisor ID {supervisor_id} not found")
+        return jsonify({"error": "Supervisor not found"}), 404
+    
+    # Access control: Admins or the supervisor themselves
+    if decoded["role"] not in ["admin", "supervisor"]:
+        logger.debug(f"Unauthorized role {decoded['role']} for supervisor ID {supervisor_id}")
+        return jsonify({"error": "Unauthorized"}), 403
+    if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
+        logger.debug(f"Supervisor {decoded['identifier']} attempted to access supervisor ID {supervisor_id}")
+        return jsonify({"error": "Unauthorized: You can only view your own lesson plans"}), 403
+    
+    try:
+        # Get lesson plans for this supervisor
+        lesson_plans = users.get("lesson_plans", [])
+        supervisor_lesson_plans = [
+            lp for lp in lesson_plans
+            if isinstance(lp, dict) and lp.get("supervisorId") == supervisor_id
+        ]
+        
+        # Filter by status if provided
+        status = request.args.get("status")
+        if status:
+            supervisor_lesson_plans = [
+                lp for lp in supervisor_lesson_plans
+                if lp.get("status") == status.upper()
+            ]
+        
+        logger.debug(f"Returning {len(supervisor_lesson_plans)} lesson plans for supervisor ID {supervisor_id}")
+        return jsonify({"lessonPlans": supervisor_lesson_plans}), 200
+    except Exception as e:
+        logger.error(f"Error in GET /api/supervisors/{supervisor_id}/lesson-plans: {str(e)}")
+        return jsonify({"error": "Failed to fetch lesson plans", "details": str(e)}), 500
+
+
+
+# @a
+
+
+
+
+
+
+@app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
+def get_supervisor_profile(id):
+    if request.method == "OPTIONS":
+        logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
+        response = jsonify({"status": "ok"})
+        return response, 200
+    
+    decoded, error_response = require_auth(["supervisor", "admin"])
     if error_response:
         return jsonify(error_response), error_response["status"]
     
-    # Validate supervisor
-    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
-    if not supervisor:
-        return jsonify({"error": "Supervisor not found"}), 404
-    if decoded["identifier"] != supervisor["staffId"]:
-        return jsonify({"error": "Unauthorized: You can only review lesson plans assigned to you"}), 403
+    try:
+        users_data = load_users()
+        supervisor_id = get_user_id(id, users_data)
+        # Validate supervisor exists
+        supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == supervisor_id), None)
+        if not supervisor:
+            logger.warning(f"Supervisor not found for id/staffId: {id}")
+            return jsonify({"error": f"Supervisor not found: {id}"}), 404
+        
+        # Access control
+        if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
+            logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
+            return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
+        
+        # Enrich supervisor data
+        s_copy = supervisor.copy()
+        
+        # Get assigned trainees
+        assignments = users_data.get("tp_assignments", [])
+        trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
+        trainees = [
+            {
+                "id": t["id"],
+                "name": t["name"],
+                "surname": t["surname"],
+                "regNo": t["regNo"],
+                "email": t["email"],
+                "phone": t.get("phone", ""),
+                "address": t["address"],
+                "bloodType": t["bloodType"],
+                "sex": t["sex"],
+                "birthday": t["birthday"],
+                "progress": t.get("progress",""),
+                "img": t.get("img", ""),
+            }
+            for t in users_data.get("teacherTrainee", [])
+            if t["id"] in trainee_ids
+        ]
+        s_copy["assignedTrainees"] = trainees
+        
+        # Get lesson plans, sorted by createdAt descending
+        lesson_plans = sorted(
+            [
+                lp for lp in users_data.get("lesson_plans", [])
+                if lp.get("supervisorId") == supervisor["id"]
+            ],
+            key=lambda lp: lp.get("createdAt", datetime.now().isoformat()),
+            reverse=True
+        )
+        s_copy["lessonPlans"] = [
+            {
+                "id": lp.get("id", ""),
+                "traineeId": lp.get("traineeId", ""),
+                "supervisorId": lp.get("supervisorId", ""),
+                "title": lp.get("title", "Untitled"),
+                "subject": lp.get("subject", "Unknown"),
+                "class": lp.get("class", "Unknown"),
+                "date": lp.get("date", datetime.now().strftime("%Y-%m-%d")),
+                "startTime": normalize_time(lp.get("startTime", None)),
+                "endTime": normalize_time(lp.get("endTime", None)),
+                "objectives": lp.get("objectives", ""),
+                "activities": lp.get("activities", ""),
+                "resources": lp.get("resources", ""),
+                "createdAt": normalize_datetime(lp.get("createdAt", datetime.now().isoformat())),
+                "status": lp.get("status", "PENDING"),
+                "aiGenerated": lp.get("aiGenerated", False),
+                "traineeName": next(
+                    (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == lp.get("traineeId")),
+                    lp.get("traineeId", "Unknown Trainee")
+                ),
+                "supervisorName": f"{supervisor['name']} {supervisor['surname']}",
+                "schoolName": next(
+                    (s["name"] for s in users_data.get("schools", []) if s["id"] == lp.get("schoolId")),
+                    "Not Assigned"
+                ),
+                "pdfUrl": lp.get("pdfUrl", None)
+            }
+            for lp in lesson_plans
+        ]
+        
+        # Validate lesson plan data
+        valid_trainees = {t["id"] for t in users_data.get("teacherTrainee", [])}
+        valid_schools = {s["id"] for s in users_data.get("schools", [])}
+        for lp in s_copy["lessonPlans"]:
+            if lp["traineeId"] not in valid_trainees:
+                logger.warning(f"Lesson plan {lp['id']} has invalid traineeId: {lp['traineeId']}")
+            if lp.get("schoolId") and lp["schoolId"] not in valid_schools:
+                logger.warning(f"Lesson plan {lp['id']} has invalid schoolId: {lp['schoolId']}")
+            
+            # Log missing fields
+            missing_fields = []
+            required_fields = ["supervisorName", "schoolName", "class", "traineeName", "objectives", "activities", "resources"]
+            for field in required_fields:
+                if not lp.get(field) or lp.get(field) in ["Unknown", "Unknown Trainee", "Not Assigned"]:
+                    missing_fields.append(field)
+            if missing_fields:
+                logger.warning(f"Lesson plan ID {lp['id']} missing fields: {missing_fields}, LessonPlan: {lp}")
+        
+        # Get observation schedules and backfill missing fields
+        schedules = [
+            s for s in users_data.get("supervisor_schedule", [])
+            if s["supervisorId"] == supervisor["id"]
+        ]
+        updated_schedules = False
+        for s in schedules:
+            # Backfill lessonPlanTitle
+            if not s.get("lessonPlanTitle"):
+                s["lessonPlanTitle"] = next(
+                    (lp["title"] for lp in lesson_plans if lp["id"] == s.get("lesson_plan_id")),
+                    "Unknown Lesson Plan"
+                )
+                updated_schedules = True
+                logger.info(f"Backfilled lessonPlanTitle for schedule {s['id']}: {s['lessonPlanTitle']}")
+            
+            # Backfill traineeName
+            if not s.get("traineeName"):
+                s["traineeName"] = next(
+                    (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == s.get("traineeId")),
+                    "Unknown Trainee"
+                )
+                updated_schedules = True
+                logger.info(f"Backfilled traineeName for schedule {s['id']}: {s['traineeName']}")
+        
+        # Save updated schedules to users.json
+        if updated_schedules:
+            try:
+                with lock:
+                    users_data["supervisor_schedule"] = [
+                        s if s["supervisorId"] != supervisor["id"] else next(
+                            (us for us in schedules if us["id"] == s["id"]), s
+                        ) for s in users_data.get("supervisor_schedule", [])
+                    ]
+                    save_users(users_data)
+                    logger.info(f"Saved updated schedules for supervisor {supervisor_id}")
+            except Exception as e:
+                logger.error(f"Failed to save updated schedules: {str(e)}")
+        
+        s_copy["schedules"] = [
+            {
+                "id": s.get("id", ""),
+                "lesson_plan_id": s.get("lesson_plan_id", ""),
+                "traineeId": s.get("traineeId", ""),
+                "date": s.get("date", ""),
+                "start_time": normalize_time(s.get("start_time", "")),
+                "end_time": normalize_time(s.get("end_time", "")),
+                "status": s.get("status", "SCHEDULED"),
+                "created_at": normalize_datetime(s.get("created_at", "")),
+                "lessonPlanTitle": s.get("lessonPlanTitle", "Unknown Lesson Plan"),
+                "traineeName": s.get("traineeName", "Unknown Trainee")
+            }
+            for s in schedules
+        ]
+        
+        # Ensure all required fields with defaults
+        safe_supervisor = {
+            "id": s_copy.get("id", ""),
+            "staffId": s_copy.get("staffId", ""),
+            "name": s_copy.get("name", ""),
+            "surname": s_copy.get("surname", ""),
+            "email": s_copy.get("email", ""),
+            "phone": s_copy.get("phone", ""),       
+            "address": s_copy.get("address", ""),
+            "bloodType": s_copy.get("bloodType", ""),
+            "birthday": s_copy.get("birthday",""),
+            "placeOfSupervision": s_copy.get("placeOfSupervision",""),
+            "img": s_copy.get("img",""),
+            "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
+            "assignedTrainees": s_copy["assignedTrainees"],
+            "lessonPlans": s_copy["lessonPlans"],
+            "schedules": s_copy["schedules"]
     
+
+
+        }
+        
+        logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
+        response = jsonify(safe_supervisor)
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
+
+
+@app.route("/api/supervisors/<supervisor_id>/lesson-plans/<lesson_plan_id>/review", methods=["PUT", "OPTIONS"])
+def review_lesson_plan(supervisor_id, lesson_plan_id):
+    if request.method == "OPTIONS":
+        logger.debug("Handling OPTIONS for /api/supervisors/<supervisor_id>/lesson-plans/<lesson_plan_id>/review")
+        response = jsonify({"status": "ok"})
+        return response, 200
+
+    logger.info(f"Received review request for supervisor {supervisor_id}, lesson plan {lesson_plan_id}")
+    # Authentication
+    decoded, error_response = require_auth(["supervisor"])
+    if error_response:
+        logger.warning(f"Authentication failed: {error_response}")
+        return jsonify(error_response), error_response["status"]
+
+    # Resolve supervisor ID
+    users_data =load_users()
+    supervisor_id = get_user_id(decoded["identifier"], users_data)
+    logger.debug(f"Resolved supervisor_id: {supervisor_id}")
+    # Validate supervisor
+    supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == supervisor_id), None)
+    if not supervisor:
+        logger.error(f"Supervisor not found: {supervisor_id}")
+        return jsonify({"error": "Supervisor not found"}), 404
+
+    if decoded["identifier"] != supervisor["staffId"]:
+        logger.error(f"Unauthorized: Token identifier {decoded['identifier']} does not match supervisor staffId {supervisor['staffId']}")
+        return jsonify({"error": "Unauthorized: You can only review lesson plans assigned to you"}), 403
+
     # Validate lesson plan
-    lesson_plans = users.get("lesson_plans", [])
+    lesson_plans = users_data.get("lesson_plans", [])
     lesson_plan = next((lp for lp in lesson_plans if lp["id"] == lesson_plan_id and lp["supervisorId"] == supervisor_id), None)
     if not lesson_plan:
+        logger.error(f"Lesson plan not found or not assigned: {lesson_plan_id} for supervisor {supervisor_id}")
         return jsonify({"error": "Lesson plan not found or not assigned to you"}), 404
-    
+
     # Validate request data
     data = request.get_json() or {}
+    logger.debug(f"Request data: {data}")
     required_fields = ["status", "comments"]
     if not all(field in data for field in required_fields):
+        logger.error(f"Missing required fields: {required_fields}")
         return jsonify({"error": "Missing required fields: status, comments"}), 400
     if data["status"] not in ["APPROVED", "REJECTED"]:
+        logger.error(f"Invalid status: {data['status']}")
         return jsonify({"error": "Status must be APPROVED or REJECTED"}), 400
-    
+    score = data.get("score")
+    if score is not None:
+        try:
+            score = int(score)
+            if not 0 <= score <= 10:
+                logger.error(f"Invalid score: {score}")
+                return jsonify({"error": "Score must be between 0 and 10"}), 400
+        except (ValueError, TypeError):
+            logger.error(f"Invalid score type: {score}")
+            return jsonify({"error": "Score must be an integer"}), 400
+
     try:
         with lock:
-            # Update lesson plan status and add feedback
+            # Update lesson plan
             lesson_plan["status"] = data["status"]
             lesson_plan["updatedAt"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            
+            lesson_plan["reviewComments"] = data["comments"]
+            lesson_plan["reviewScore"] = score
+
             # Add feedback to observation_feedback
-            feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
+            feedback_id = f"ofb{len(users_data.get('observation_feedback', [])) + 1}"
             feedback = {
                 "id": feedback_id,
                 "lesson_plan_id": lesson_plan_id,
                 "traineeId": lesson_plan["traineeId"],
                 "supervisorId": supervisor_id,
-                "score": data.get("score", None),
+                "score": score,
                 "comments": data["comments"],
                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
             }
-            users.setdefault("observation_feedback", []).append(feedback)
-            
+            users_data.setdefault("observation_feedback", []).append(feedback)
+
+            # Create observation schedule if approved
+            schedule = None
+            if data["status"] == "APPROVED":
+                if not lesson_plan.get("date") or not lesson_plan.get("startTime") or not lesson_plan.get("endTime"):
+                    logger.warning(f"Cannot schedule observation for {lesson_plan_id}: missing date or time")
+                    return jsonify({"error": "Lesson plan missing date or time information"}), 400
+
+                try:
+                    # Validate date and times
+                    observation_date = parse(lesson_plan["date"]).strftime("%Y-%m-%d")
+                    start_time = lesson_plan["startTime"]
+                    end_time = lesson_plan["endTime"]
+                    start_parts = start_time.split(":")
+                    end_parts = end_time.split(":")
+                    if len(start_parts) < 2 or len(end_parts) < 2:
+                        raise ValueError("Invalid time format")
+                    start_hour, start_min = map(int, start_parts[:2])
+                    end_hour, end_min = map(int, end_parts[:2])
+                    if end_hour < start_hour or (end_hour == start_hour and end_min <= start_min):
+                        raise ValueError("End time must be after start time")
+
+                    # Create schedule
+                    schedule_id = f"sch{generate_unique_id()}"
+                    schedule = {
+                        "id": schedule_id,
+                        "supervisorId": supervisor_id,
+                        "traineeId": lesson_plan["traineeId"],
+                        "lesson_plan_id": lesson_plan_id,
+                        "date": observation_date,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "status": "SCHEDULED",
+                        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                        "lessonPlanTitle": lesson_plan["title"],
+                        "traineeName": lesson_plan["traineeName"]
+                    }
+                    users_data.setdefault("supervisor_schedule", []).append(schedule)
+                    logger.info(f"Observation schedule created: {schedule_id} for lesson plan {lesson_plan_id}")
+                except ValueError as e:
+                    logger.error(f"Invalid date/time for scheduling: {str(e)}")
+                    return jsonify({"error": f"Invalid date or time: {str(e)}"}), 400
+
             # Notify trainee
-            notifications = users.get("notifications", [])
+            notifications = users_data.get("notifications", [])
             notification = {
                 "id": f"notif-{generate_unique_id()}",
                 "user_id": lesson_plan["traineeId"],
@@ -4956,21 +4416,27 @@ def review_lesson_plan(supervisor_id, lesson_plan_id):
                 "read_status": False
             }
             notifications.append(notification)
-            users["notifications"] = notifications
-            
+            users_data["notifications"] = notifications
+
             # Save changes
-            users["lesson_plans"] = [lp if lp["id"] != lesson_plan_id else lesson_plan for lp in lesson_plans]
-            save_users(users)
-        
+            users_data["lesson_plans"] = [lp if lp["id"] != lesson_plan_id else lesson_plan for lp in lesson_plans]
+            save_users(users_data)
+
         logger.info(f"Lesson plan {lesson_plan_id} reviewed by supervisor {supervisor_id} with status {data['status']}")
         return jsonify({
             "message": "Lesson plan reviewed successfully",
             "lessonPlan": lesson_plan,
-            "feedback": feedback
+            "feedback": feedback,
+            "schedule": schedule
         }), 200
     except Exception as e:
-        logger.error(f"Error reviewing lesson plan {lesson_plan_id}: {str(e)}")
+        logger.error(f"Error reviewing lesson plan {lesson_plan_id}: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to review lesson plan", "details": str(e)}), 500
+
+
+
+
+
 
 # Supervisor Schedule Observation Endpoint
 @app.route("/api/supervisors/<supervisor_id>/schedule-observation", methods=["POST"])
@@ -4980,7 +4446,8 @@ def schedule_observation(supervisor_id):
         return jsonify(error_response), error_response["status"]
     
     # Validate supervisor
-    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
+    users_data =load_users()
+    supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == supervisor_id), None)
     if not supervisor:
         return jsonify({"error": "Supervisor not found"}), 404
     if decoded["identifier"] != supervisor["staffId"]:
@@ -4993,14 +4460,14 @@ def schedule_observation(supervisor_id):
         return jsonify({"error": "Missing required fields: lesson_plan_id, trainee_id, date, start_time, end_time"}), 400
     
     # Validate lesson plan
-    lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == data["lesson_plan_id"] and lp["supervisorId"] == supervisor_id), None)
+    lesson_plan = next((lp for lp in users_data.get("lesson_plans", []) if lp["id"] == data["lesson_plan_id"] and lp["supervisorId"] == supervisor_id), None)
     if not lesson_plan:
         return jsonify({"error": "Lesson plan not found or not assigned to you"}), 404
     if lesson_plan["status"] != "APPROVED":
         return jsonify({"error": "Only approved lesson plans can be scheduled for observation"}), 400
     
     # Validate trainee
-    trainee = next((t for t in users.get("teacherTrainee", []) if t["id"] == data["trainee_id"]), None)
+    trainee = next((t for t in users_data.get("teacherTrainee", []) if t["id"] == data["trainee_id"]), None)
     if not trainee:
         return jsonify({"error": "Trainee not found"}), 404
     
@@ -5029,7 +4496,7 @@ def schedule_observation(supervisor_id):
     try:
         with lock:
             # Create schedule
-            schedule_id = f"sch{len(users.get('supervisor_schedule', [])) + 1}"
+            schedule_id = f"sch{len(users_data.get('supervisor_schedule', [])) + 1}"
             schedule = {
                 "id": schedule_id,
                 "supervisorId": supervisor_id,
@@ -5041,10 +4508,10 @@ def schedule_observation(supervisor_id):
                 "status": "SCHEDULED",
                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
             }
-            users.setdefault("supervisor_schedule", []).append(schedule)
+            users_data.setdefault("supervisor_schedule", []).append(schedule)
             
             # Notify trainee
-            notifications = users.get("notifications", [])
+            notifications = users_data.get("notifications", [])
             notification = {
                 "id": f"notif-{generate_unique_id()}",
                 "user_id": data["trainee_id"],
@@ -5057,10 +4524,10 @@ def schedule_observation(supervisor_id):
                 "read_status": False
             }
             notifications.append(notification)
-            users["notifications"] = notifications
+            users_data["notifications"] = notifications
             
             # Save changes
-            save_users(users)
+            save_users(users_data)
         
         logger.info(f"Observation scheduled for lesson plan {data['lesson_plan_id']} by supervisor {supervisor_id}")
         return jsonify({
@@ -5071,25 +4538,220 @@ def schedule_observation(supervisor_id):
         logger.error(f"Error scheduling observation: {str(e)}")
         return jsonify({"error": "Failed to schedule observation", "details": str(e)}), 500
 
-# Supervisor Submit Observation Feedback Endpoint
+# # Supervisor Submit Observation Feedback Endpoint
+# @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
+# def submit_observation_feedback(supervisor_id, observation_id):
+#     decoded, error_response = require_auth("supervisor")
+#     if error_response:
+#         return jsonify(error_response), error_response["status"]
+    
+#     # Validate supervisor
+#     users_data=load_users()
+#     internal_supervisor_id=get_user_id(decoded["identifier"],users_data)
+#     supervisor = next((s for s in users.get("supervisor", []) if s["id"] == internal_supervisor_id), None)
+#     print
+   
+#     if not supervisor:
+#         return jsonify({"error": "Supervisor not found"}), 404
+#     if decoded["identifier"] != supervisor["staffId"]:
+#         return jsonify({"error": "Unauthorized: You can only submit feedback for your observations"}), 403
+    
+#     # Validate observation
+#     observation = next((o for o in users_data.get("observations", []) if o["id"] == observation_id and o["supervisorId"] == supervisor_id), None)
+#     if not observation:
+#         return jsonify({"error": "Observation not found or not assigned to you"}), 404
+#     if observation["status"] != "completed":
+#         return jsonify({"error": "Feedback can only be submitted for completed observations"}), 400
+    
+#     # Validate request data
+#     data = request.get_json() or {}
+#     required_fields = ["score", "comments"]
+#     if not all(field in data for field in required_fields):
+#         return jsonify({"error": "Missing required fields: score, comments"}), 400
+#     try:
+#         score = int(data["score"])
+#         if not 0 <= score <= 10:
+#             return jsonify({"error": "Score must be between 0 and 10"}), 400
+#     except (ValueError, TypeError):
+#         return jsonify({"error": "Score must be an integer"}), 400
+    
+#     try:
+#         with lock:
+#             # Update observation
+#             observation["score"] = score
+#             observation["comments"] = data["comments"]
+#             observation["completed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            
+#             # Add to observation_feedback for consistency with lesson plan feedback
+#             feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
+#             feedback = {
+#                 "id": feedback_id,
+#                 "lesson_plan_id": observation.get("lesson_plan_id", None),
+#                 "traineeId": observation["traineeId"],
+#                 "supervisorId": supervisor_id,
+#                 "score": score,
+#                 "comments": data["comments"],
+#                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+#             }
+#             users.setdefault("observation_feedback", []).append(feedback)
+            
+#             # Notify trainee
+#             notifications = users.get("notifications", [])
+#             lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == observation.get("lesson_plan_id")), None)
+#             lesson_title = lesson_plan["title"] if lesson_plan else "Lesson"
+#             notification = {
+#                 "id": f"notif-{generate_unique_id()}",
+#                 "user_id": observation["traineeId"],
+#                 "initiator_id": supervisor["staffId"],
+#                 "event_id": observation_id,
+#                 "type": "OBSERVATION_FEEDBACK",
+#                 "priority": "HIGH",
+#                 "message": f"Feedback submitted for observation of '{lesson_title}': Score {score}/10. Comments: {data['comments']}",
+#                 "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+#                 "read_status": False
+#             }
+#             notifications.append(notification)
+#             users["notifications"] = notifications
+            
+#             # Save changes
+#             users["observations"] = [o if o["id"] != observation_id else observation for o in users.get("observations", [])]
+#             save_users(users)
+        
+#         logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor_id}")
+#         return jsonify({
+#             "message": "Feedback submitted successfully",
+#             "observation": observation,
+#             "feedback": feedback
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Error submitting observation feedback: {str(e)}")
+#         return jsonify({"error": "Failed to submit feedback", "details": str(e)}), 500
+
+
+# @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
+# def submit_observation_feedback(supervisor_id, observation_id):
+#     decoded, error_response = require_auth("supervisor")
+#     if error_response:
+#         return jsonify(error_response), error_response["status"]
+    
+#     # Load user data
+#     users_data = load_users()
+    
+#     # Log debugging information
+#     logger.info(f"Decoded identifier: {decoded['identifier']}")
+#     # logger.info(f"Supervisor data: {users_data.get('supervisor', [])}")
+    
+#     internal_supervisor_id = get_user_id(decoded['identifier'],users_data)
+#     # Validate supervisor
+#     supervisor = next((s for s in users_data.get("supervisor", []) if s["staffId"] == decoded["identifier"]), None)
+   
+#     if not supervisor:
+#         return jsonify({"error": "Supervisor not found"}), 404
+#     if decoded["identifier"] != supervisor["staffId"]:
+#         return jsonify({"error": "Unauthorized: You can only submit feedback for your observations"}), 403
+    
+#     # Validate observation
+#     observation = next((o for o in users_data.get("observations", []) if o["id"] == observation_id and o["supervisorId"] == internal_supervisor_id), None)
+#     logger.info(f"Found observation: {observation}")
+#     if not observation:
+#         return jsonify({"error": "Observation not found or not assigned to you"}), 404
+#     if observation["status"] != "completed":
+#         return jsonify({"error": "Feedback can only be submitted for completed observations"}), 400
+    
+#     # Validate request data
+#     data = request.get_json() or {}
+#     required_fields = ["score", "comments"]
+#     if not all(field in data for field in required_fields):
+#         return jsonify({"error": "Missing required fields: score, comments"}), 400
+#     try:
+#         score = int(data["score"])
+#         if not 0 <= score <= 10:
+#             return jsonify({"error": "Score must be between 0 and 10"}), 400
+#     except (ValueError, TypeError):
+#         return jsonify({"error": "Score must be an integer"}), 400
+    
+#     try:
+#         with lock:
+#             # Update observation
+#             observation["score"] = score
+#             observation["comments"] = data["comments"]
+#             observation["completed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            
+#             # Add to observation_feedback for consistency with lesson plan feedback
+#             feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
+#             feedback = {
+#                 "id": feedback_id,
+#                 "lesson_plan_id": observation.get("lesson_plan_id", None),
+#                 "traineeId": observation["traineeId"],
+#                 "supervisorId": supervisor["id"],
+#                 "score": score,
+#                 "comments": data["comments"],
+#                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+#             }
+#             users.setdefault("observation_feedback", []).append(feedback)
+            
+#             # Notify trainee
+#             notifications = users.get("notifications", [])
+#             lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == observation.get("lesson_plan_id")), None)
+#             lesson_title = lesson_plan["title"] if lesson_plan else "Lesson"
+#             notification = {
+#                 "id": f"notif-{generate_unique_id()}",
+#                 "user_id": observation["traineeId"],
+#                 "initiator_id": supervisor["staffId"],
+#                 "event_id": observation_id,
+#                 "type": "OBSERVATION_FEEDBACK",
+#                 "priority": "HIGH",
+#                 "message": f"Feedback submitted for observation of '{lesson_title}': Score {score}/10. Comments: {data['comments']}",
+#                 "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+#                 "read_status": False
+#             }
+#             notifications.append(notification)
+#             users["notifications"] = notifications
+            
+#             # Save changes
+#             users["observations"] = [o if o["id"] != observation_id else observation for o in users.get("observations", [])]
+#             save_users(users)
+        
+#         logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor['staffId']}")
+#         return jsonify({
+#             "message": "Feedback submitted successfully",
+#             "observation": observation,
+#             "feedback": feedback
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Error submitting observation feedback: {str(e)}")
+#         return jsonify({"error": "Failed to submit feedback", "details": str(e)}), 500
+
+
 @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
 def submit_observation_feedback(supervisor_id, observation_id):
     decoded, error_response = require_auth("supervisor")
     if error_response:
         return jsonify(error_response), error_response["status"]
     
+    # Load user data
+    users_data = load_users()
+    
+    # Log debugging information
+    logger.info(f"Decoded identifier: {decoded['identifier']}")
+    logger.info(f"Supervisor data: {users_data.get('supervisor', [])}")
+    
     # Validate supervisor
-    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
+    internal_supervisor_id = get_user_id(decoded['identifier'], users_data)
+    supervisor = next((s for s in users_data.get("supervisor", []) if s["staffId"] == decoded["identifier"]), None)
+    logger.info(f"Found supervisor: {supervisor}")
     if not supervisor:
         return jsonify({"error": "Supervisor not found"}), 404
     if decoded["identifier"] != supervisor["staffId"]:
         return jsonify({"error": "Unauthorized: You can only submit feedback for your observations"}), 403
     
     # Validate observation
-    observation = next((o for o in users.get("observations", []) if o["id"] == observation_id and o["supervisorId"] == supervisor_id), None)
+    logger.info(f"Supervisor schedule: {users_data.get('supervisor_schedule', [])}")
+    observation = next((o for o in users_data.get("supervisor_schedule", []) if o["id"] == observation_id and o["supervisorId"] == supervisor["id"]), None)
+    logger.info(f"Found observation: {observation}")
     if not observation:
         return jsonify({"error": "Observation not found or not assigned to you"}), 404
-    if observation["status"] != "completed":
+    if observation["status"] != "COMPLETED":
         return jsonify({"error": "Feedback can only be submitted for completed observations"}), 400
     
     # Validate request data
@@ -5106,32 +4768,27 @@ def submit_observation_feedback(supervisor_id, observation_id):
     
     try:
         with lock:
-            # Update observation
-            observation["score"] = score
-            observation["comments"] = data["comments"]
-            observation["completed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            
-            # Add to observation_feedback for consistency with lesson plan feedback
-            feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
+            # Add to observation_feedback
+            feedback_id = f"ofb{len(users_data.get('observation_feedback', [])) + 1}"
             feedback = {
                 "id": feedback_id,
-                "lesson_plan_id": observation.get("lesson_plan_id", None),
+                "lesson_plan_id": observation["lesson_plan_id"],
                 "traineeId": observation["traineeId"],
-                "supervisorId": supervisor_id,
+                "supervisorId": supervisor["id"],
                 "score": score,
                 "comments": data["comments"],
                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
             }
-            users.setdefault("observation_feedback", []).append(feedback)
+            users_data.setdefault("observation_feedback", []).append(feedback)
             
             # Notify trainee
-            notifications = users.get("notifications", [])
-            lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == observation.get("lesson_plan_id")), None)
+            notifications = users_data.get("notifications", [])
+            lesson_plan = next((lp for lp in users_data.get("lesson_plans", []) if lp["id"] == observation["lesson_plan_id"]), None)
             lesson_title = lesson_plan["title"] if lesson_plan else "Lesson"
             notification = {
                 "id": f"notif-{generate_unique_id()}",
                 "user_id": observation["traineeId"],
-                "initiator_id": supervisor["staffId"],
+                "initiator_id": supervisor["id"],
                 "event_id": observation_id,
                 "type": "OBSERVATION_FEEDBACK",
                 "priority": "HIGH",
@@ -5140,21 +4797,21 @@ def submit_observation_feedback(supervisor_id, observation_id):
                 "read_status": False
             }
             notifications.append(notification)
-            users["notifications"] = notifications
+            users_data["notifications"] = notifications
             
             # Save changes
-            users["observations"] = [o if o["id"] != observation_id else observation for o in users.get("observations", [])]
-            save_users(users)
+            save_users(users_data)
         
-        logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor_id}")
+        logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor['staffId']}")
         return jsonify({
             "message": "Feedback submitted successfully",
-            "observation": observation,
             "feedback": feedback
         }), 200
     except Exception as e:
         logger.error(f"Error submitting observation feedback: {str(e)}")
         return jsonify({"error": "Failed to submit feedback", "details": str(e)}), 500
+
+
 
 # Supervisor Get Assigned Trainees Endpoint
 @app.route("/api/supervisors/<supervisor_id>/trainees", methods=["GET", "OPTIONS"])
@@ -5211,13 +4868,159 @@ def get_supervisor_trainees(supervisor_id):
         logger.error(f"Error fetching trainees for supervisor {supervisor_id}: {str(e)}")
         return jsonify({"error": "Failed to fetch trainees", "details": str(e)}), 500
 
-# Supervisor Get Observation Schedules Endpoint
+# # Supervisor Get Observation Schedules Endpoint
+# @app.route("/api/supervisors/<supervisor_id>/schedules", methods=["GET", "OPTIONS"])
+# def get_supervisor_schedules(supervisor_id):
+#     if request.method == "OPTIONS":
+#         return jsonify({"status": "ok"}), 200
+    
+#     decoded, error_response = require_auth(["supervisor"])
+#     if error_response:
+#         return jsonify(error_response), error_response["status"]
+    
+#     # Validate supervisor
+#     supervisor = next((s for s in users.get("supervisor", []) if s["staffId"] == supervisor_id), None)
+#     if not supervisor:
+#         return jsonify({"error": "Supervisor not found"}), 404
+#     if decoded["identifier"] != supervisor["staffId"]:
+#         return jsonify({"error": "Unauthorized: You can only view your own schedules"}), 403
+    
+#     try:
+#         # Get schedules
+#         schedules = [
+#             s for s in users.get("supervisor_schedule", [])
+#             if s["supervisorId"] == supervisor_id
+#         ]
+        
+#         # Enrich schedules with lesson plan and trainee details
+#         lesson_plans = {lp["id"]: lp for lp in users.get("lesson_plans", [])}
+#         trainees = {t["id"]: t for t in users.get("teacherTrainee", [])}
+#         enriched_schedules = []
+#         for schedule in schedules:
+#             s_copy = schedule.copy()
+#             lesson_plan = lesson_plans.get(schedule["lesson_plan_id"])
+#             trainee = trainees.get(schedule["traineeId"])
+#             s_copy["lessonPlanTitle"] = lesson_plan["title"] if lesson_plan else "Unknown"
+#             s_copy["traineeName"] = f"{trainee['name']} {trainee['surname']}" if trainee else "Unknown"
+#             enriched_schedules.append(s_copy)
+        
+#         # Filter by status if provided
+#         status = request.args.get("status")
+#         if status:
+#             enriched_schedules = [s for s in enriched_schedules if s["status"] == status.upper()]
+        
+#         # Pagination
+#         page = int(request.args.get("page", 1))
+#         per_page = ITEMS_PER_PAGE
+#         total = len(enriched_schedules)
+#         total_pages = max(1, (total + per_page - 1) // per_page)
+#         start = (page - 1) * per_page
+#         end = start + per_page
+#         paginated_schedules = enriched_schedules[start:end]
+        
+#         logger.info(f"Fetched {len(paginated_schedules)} schedules for supervisor {supervisor_id}")
+#         return jsonify({
+#             "schedules": paginated_schedules,
+#             "totalCount": total,
+#             "totalPages": total_pages,
+#             "currentPage": page
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Error fetching schedules for supervisor {supervisor_id}: {str(e)}")
+#         return jsonify({"error": "Failed to fetch schedules", "details": str(e)}), 500
+
+
+
+
+
 @app.route("/api/supervisors/<supervisor_id>/schedules", methods=["GET", "OPTIONS"])
 def get_supervisor_schedules(supervisor_id):
     if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-    
+        logger.debug("Handling OPTIONS for /api/supervisors/<supervisor_id>/schedules")
+        response = jsonify({"status": "ok"})
+        return response, 200
+
     decoded, error_response = require_auth(["supervisor"])
+    if error_response:
+        logger.warning(f"Authentication failed: {error_response}")
+        return jsonify(error_response), error_response["status"]
+
+    supervisor_id = get_user_id(decoded["identifier"], users)
+    logger.debug(f"Resolved supervisor_id: {supervisor_id}")
+    supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id), None)
+    if not supervisor:
+        logger.error(f"Supervisor not found: {supervisor_id}")
+        return jsonify({"error": "Supervisor not found"}), 404
+
+    if decoded["identifier"] != supervisor["staffId"]:
+        logger.error(f"Unauthorized: Token identifier {decoded['identifier']} does not match supervisor staffId {supervisor['staffId']}")
+        return jsonify({"error": "Unauthorized: You can only view your schedules"}), 403
+
+    try:
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 10))
+        start = (page - 1) * limit
+        end = start + limit
+
+        schedules = sorted(
+            [s for s in users.get("supervisor_schedule", []) if s["supervisorId"] == supervisor_id],
+            key=lambda s: s.get("created_at", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+            reverse=True
+        )
+        total_count = len(schedules)
+        total_pages = max(1, (total_count + limit - 1) // limit)
+        paginated_schedules = schedules[start:end]
+
+        response_data = {
+            "schedules": [
+                {
+                    "id": s["id"],
+                    "supervisorId": s["supervisorId"],
+                    "traineeId": s["traineeId"],
+                    "lesson_plan_id": s["lesson_plan_id"],
+                    "date": s["date"],
+                    "start_time": s["start_time"],
+                    "end_time": s["end_time"],
+                    "status": s["status"],
+                    "created_at": s["created_at"],
+                    "lessonPlanTitle": s["lessonPlanTitle"],
+                    "traineeName": s["traineeName"],
+                }
+                for s in paginated_schedules
+            ],
+            "totalCount": total_count,
+            "totalPages": total_pages,
+            "currentPage": page,
+        }
+
+        logger.info(f"Fetched schedules for supervisor {supervisor_id}: {total_count} schedules")
+        response = jsonify(response_data)
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 200
+
+    except Exception as e:
+        logger.error(f"Error fetching schedules: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Error: {str(e)}"}), 500
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.route("/api/supervisors/<supervisor_id>/observation-feedback", methods=["GET"])
+def get_observation_feedback(supervisor_id):
+    decoded, error_response = require_auth("supervisor")
     if error_response:
         return jsonify(error_response), error_response["status"]
     
@@ -5226,328 +5029,638 @@ def get_supervisor_schedules(supervisor_id):
     if not supervisor:
         return jsonify({"error": "Supervisor not found"}), 404
     if decoded["identifier"] != supervisor["staffId"]:
-        return jsonify({"error": "Unauthorized: You can only view your own schedules"}), 403
+        return jsonify({"error": "Unauthorized: You can only view your own feedback"}), 403
     
     try:
-        # Get schedules
-        schedules = [
-            s for s in users.get("supervisor_schedule", [])
-            if s["supervisorId"] == supervisor_id
+        # Get feedback for supervisor's lesson plans
+        feedback_list = [
+            fb for fb in users.get("observation_feedback", [])
+            if fb["supervisorId"] == supervisor_id
         ]
-        
-        # Enrich schedules with lesson plan and trainee details
-        lesson_plans = {lp["id"]: lp for lp in users.get("lesson_plans", [])}
-        trainees = {t["id"]: t for t in users.get("teacherTrainee", [])}
-        enriched_schedules = []
-        for schedule in schedules:
-            s_copy = schedule.copy()
-            lesson_plan = lesson_plans.get(schedule["lesson_plan_id"])
-            trainee = trainees.get(schedule["traineeId"])
-            s_copy["lessonPlanTitle"] = lesson_plan["title"] if lesson_plan else "Unknown"
-            s_copy["traineeName"] = f"{trainee['name']} {trainee['surname']}" if trainee else "Unknown"
-            enriched_schedules.append(s_copy)
-        
-        # Filter by status if provided
-        status = request.args.get("status")
-        if status:
-            enriched_schedules = [s for s in enriched_schedules if s["status"] == status.upper()]
         
         # Pagination
         page = int(request.args.get("page", 1))
         per_page = ITEMS_PER_PAGE
-        total = len(enriched_schedules)
+        total = len(feedback_list)
         total_pages = max(1, (total + per_page - 1) // per_page)
         start = (page - 1) * per_page
         end = start + per_page
-        paginated_schedules = enriched_schedules[start:end]
+        paginated_feedback = feedback_list[start:end]
         
-        logger.info(f"Fetched {len(paginated_schedules)} schedules for supervisor {supervisor_id}")
+        logger.info(f"Fetched {len(paginated_feedback)} feedback items for supervisor {supervisor_id}")
         return jsonify({
-            "schedules": paginated_schedules,
+            "feedback": paginated_feedback,
             "totalCount": total,
             "totalPages": total_pages,
             "currentPage": page
         }), 200
     except Exception as e:
-        logger.error(f"Error fetching schedules for supervisor {supervisor_id}: {str(e)}")
-        return jsonify({"error": "Failed to fetch schedules", "details": str(e)}), 500
+        logger.error(f"Error fetching feedback for supervisor {supervisor_id}: {str(e)}")
+        return jsonify({"error": "Failed to fetch feedback", "details": str(e)}), 500
 
 
-# Supervisor Profile Endpoint
-@app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
-# @_require_auth(["supervisor","admin"])
-def get_supervisor_profile(id):
+
+
+
+
+
+
+
+
+
+
+
+
+@app.route("/api/feedback", methods=["GET", "OPTIONS"])
+def get_feedback():
+    # Handle CORS preflight request
     if request.method == "OPTIONS":
-        logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
         response = jsonify({"status": "ok"})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        logger.debug(f"OPTIONS response headers for /api/trainees/me: {response.headers}")
         return response, 200
-    
-    decoded, error_response = require_auth(["supervisor", "admin"])
+
+    # Authenticate user
+    decoded, error_response = require_auth(["supervisor", "teacherTrainee"])
     if error_response:
-        return jsonify(error_response), error_response["status"]
-    
+        logger.warning(f"Authentication failed: {error_response.get_json()['error']}")
+        return error_response
+
+    # Get query parameters
+    user_id = request.args.get("userId")
+    role = request.args.get("role", "")  # Preserve camelCase
+    page = int(request.args.get("page", 1))
+    search = request.args.get("search", "").lower()
+    lesson_plan_id = request.args.get("lessonPlanId")
+
+    # Validate inputs
+    valid_roles = ["supervisor", "teacherTrainee"]
+    if not user_id:
+        logger.error("Invalid request: userId is missing")
+        return jsonify({"error": "Missing user ID"}), 400
+    if not role or role not in valid_roles:
+        logger.error(f"Invalid request: role={role}, expected one of {valid_roles}")
+        return jsonify({"error": f"Invalid role: {role}. Expected one of {valid_roles}"}), 400
+
+    # Resolve internal user ID
+    internal_user_id = get_user_id(user_id, users)
+    if not internal_user_id:
+        logger.error(f"User not found for identifier: {user_id} ({role})")
+        return jsonify({"error": "User not found"}), 404
+
+    # Verify token matches user
+    if decoded["identifier"] != user_id:
+        logger.warning(f"Unauthorized: Token identifier {decoded['identifier']} does not match {user_id}")
+        return jsonify({"error": "Unauthorized: You can only view your own feedback"}), 403
+
     try:
-        # Validate supervisor exists
-        supervisor = next((s for s in users.get("supervisor", []) if s["id"] == id or s["staffId"] == id), None)
-        if not supervisor:
-            logger.warning(f"Supervisor not found for id/staffId: {id}")
-            return jsonify({"error": f"Supervisor not found: {id}"}), 404
-        
-        # Access control
-        if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
-            logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
-            return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
-        
-        # Enrich supervisor data
-        s_copy = supervisor.copy()
-        
-        # Get assigned trainees
-        assignments = users.get("tp_assignments", [])
-        trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
-        trainees = [
-            {
-                "id": t["id"],
-                "name": t["name"],
-                "surname": t["surname"],
-                "regNo": t["regNo"],
-                "email": t["email"]
+        # Get feedback
+        feedback_list = users.get("observation_feedback", [])
+        filtered_feedback = []
+
+        for feedback in feedback_list:
+            # Filter by role
+            if role == "supervisor" and feedback["supervisorId"] != internal_user_id:
+                continue
+            if role == "teacherTrainee" and feedback["traineeId"] != internal_user_id:
+                continue
+            # Filter by lesson plan ID if provided
+            if lesson_plan_id and feedback.get("lesson_plan_id") != lesson_plan_id:
+                continue
+
+            # Enrich feedback
+            enriched = feedback.copy()
+            lesson_plan = next(
+                (lp for lp in users.get("lesson_plans", []) if lp["id"] == feedback.get("lesson_plan_id")),
+                None
+            )
+            trainee = next(
+                (t for t in users.get("teacherTrainee", []) if t["id"] == feedback["traineeId"]),
+                None
+            )
+            supervisor = next(
+                (s for s in users.get("supervisor", []) if s["id"] == feedback["supervisorId"]),
+                None
+            )
+            enriched["lessonPlanTitle"] = lesson_plan["title"] if lesson_plan else "N/A"
+            enriched["traineeName"] = f"{trainee['name']} {trainee['surname']}" if trainee else "N/A"
+            enriched["supervisorName"] = f"{supervisor['name']} {supervisor['surname']}" if supervisor else "N/A"
+
+            # Search filter
+            if search:
+                search_fields = [
+                    enriched["lessonPlanTitle"].lower(),
+                    enriched["traineeName"].lower(),
+                    enriched["supervisorName"].lower(),
+                    feedback["comments"].lower(),
+                ]
+                if not any(search in field for field in search_fields):
+                    continue
+
+            filtered_feedback.append(enriched)
+
+        # Pagination
+        total = len(filtered_feedback)
+        total_pages = max(1, (total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+        start = (page - 1) * ITEMS_PER_PAGE
+        end = start + ITEMS_PER_PAGE
+        paginated_feedback = filtered_feedback[start:end]
+
+        logger.info(f"Fetched {len(paginated_feedback)} feedback items for {role} {user_id}")
+        return jsonify({
+            "feedback": paginated_feedback,
+            "totalCount": total,
+            "totalPages": total_pages,
+            "currentPage": page
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching feedback for {role} {user_id}: {str(e)}")
+        return jsonify({"error": "Failed to fetch feedback", "details": str(e)}), 500
+
+
+
+
+
+
+
+
+
+
+
+
+# Existing endpoints (only including the new endpoint for brevity)
+@app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/status", methods=["PUT", "OPTIONS"])
+def update_observation_status(supervisor_id, observation_id):
+    if request.method == "OPTIONS":
+        logger.debug(f"Handling OPTIONS for /api/supervisors/{supervisor_id}/observations/{observation_id}/status")
+        response = jsonify({"status": "ok"})
+        return response, 200
+
+    logger.info(f"Received status update request for supervisor {supervisor_id}, observation {observation_id}")
+    
+    # Authentication
+    decoded, error_response = require_auth(["supervisor"])
+    if error_response:
+        logger.warning(f"Authentication failed: {error_response}")
+        return jsonify(error_response), error_response["status"]
+
+    # Resolve supervisor ID
+    users_data = load_users()
+    resolved_supervisor_id = get_user_id(decoded["identifier"], users_data)
+    logger.debug(f"Resolved supervisor_id: {resolved_supervisor_id}")
+
+    # Validate supervisor
+    supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == resolved_supervisor_id), None)
+    if not supervisor:
+        logger.error(f"Supervisor not found: {resolved_supervisor_id}")
+        return jsonify({"error": "Supervisor not found"}), 404
+
+    if decoded["identifier"] != supervisor["staffId"]:
+        logger.error(f"Unauthorized: Token identifier {decoded['identifier']} does not match supervisor staffId {supervisor['staffId']}")
+        return jsonify({"error": "Unauthorized: You can only update your own observations"}), 403
+
+    # Validate observation
+    schedule = next(
+        (s for s in users_data.get("supervisor_schedule", []) if s["id"] == observation_id and s["supervisorId"] == resolved_supervisor_id),
+        None
+    )
+    if not schedule:
+        logger.error(f"Observation not found or not assigned: {observation_id} for supervisor {resolved_supervisor_id}")
+        return jsonify({"error": "Observation not found or not assigned to you"}), 404
+
+    # Validate request data
+    data = request.get_json() or {}
+    logger.debug(f"Request data: {data}")
+    required_fields = ["status"]
+    if not all(field in data for field in required_fields):
+        logger.error(f"Missing required fields: {required_fields}")
+        return jsonify({"error": "Missing required field: status"}), 400
+
+    if data["status"] not in ["ONGOING", "COMPLETED"]:
+        logger.error(f"Invalid status: {data['status']}")
+        return jsonify({"error": "Status must be ONGOING or COMPLETED"}), 400
+
+    # Validate status transition
+    current_status = schedule["status"]
+    if current_status == "COMPLETED":
+        logger.error(f"Cannot update status: Observation {observation_id} is already COMPLETED")
+        return jsonify({"error": "Observation is already completed"}), 400
+    if data["status"] == "ONGOING" and current_status != "SCHEDULED":
+        logger.error(f"Invalid transition: Cannot change status from {current_status} to ONGOING")
+        return jsonify({"error": "Observation must be SCHEDULED to mark as ONGOING"}), 400
+    if data["status"] == "COMPLETED" and current_status != "ONGOING":
+        logger.error(f"Invalid transition: Cannot change status from {current_status} to COMPLETED")
+        return jsonify({"error": "Observation must be ONGOING to mark as COMPLETED"}), 400
+
+    try:
+        with lock:
+            # Update schedule
+            schedule["status"] = data["status"]
+            schedule["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+            # Notify trainee
+            lesson_plan = next(
+                (lp for lp in users_data.get("lesson_plans", []) if lp["id"] == schedule["lesson_plan_id"]),
+                None
+            )
+            lesson_plan_title = lesson_plan["title"] if lesson_plan else "Unknown Lesson Plan"
+            notifications = users_data.get("notifications", [])
+            notification = {
+                "id": f"notif-{generate_unique_id()}",
+                "user_id": schedule["traineeId"],
+                "initiator_id": supervisor["staffId"],
+                "event_id": observation_id,
+                "type": "OBSERVATION_STATUS",
+                "priority": "MEDIUM",
+                "message": f"Observation for '{lesson_plan_title}' has been marked as {data['status'].lower()}.",
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "read_status": False,
             }
-            for t in users.get("teacherTrainee", [])
-            if t["id"] in trainee_ids
-        ]
-        s_copy["assignedTrainees"] = trainees
-        
-        # Get lesson plans
-        lesson_plans = [
-            lp for lp in users.get("lesson_plans", [])
-            if lp.get("supervisorId") == supervisor["id"]
-        ]
-        s_copy["lessonPlans"] = [
-            {
-                "id": lp.get("id", ""),
-                "title": lp.get("title", "Untitled"),
-                "subject": lp.get("subject", ""),
-                "date": lp.get("date", ""),
-                "startTime": normalize_time(lp.get("startTime", "")),
-                "endTime": normalize_time(lp.get("endTime", "")),
-                "status": lp.get("status", "PENDING"),
-                "traineeId": lp.get("traineeId", ""),
-                "traineeName": lp.get("traineeName", ""),
-                "createdAt": normalize_datetime(lp.get("createdAt", ""))
-            }
-            for lp in lesson_plans
-        ]
-        
-        # Get observation schedules
-        schedules = [
-            s for s in users.get("supervisor_schedule", [])
-            if s["supervisorId"] == supervisor["id"]
-        ]
-        s_copy["schedules"] = [
-            {
-                "id": s.get("id", ""),
-                "lesson_plan_id": s.get("lesson_plan_id", ""),
-                "traineeId": s.get("traineeId", ""),
-                "date": s.get("date", ""),
-                "start_time": normalize_time(s.get("start_time", "")),
-                "end_time": normalize_time(s.get("end_time", "")),
-                "status": s.get("status", "SCHEDULED"),
-                "created_at": s.get("created_at", "")
-            }
-            for s in schedules
-        ]
-        
-        # Ensure all required fields with defaults
-        safe_supervisor = {
-            "id": s_copy.get("id", ""),
-            "staffId": s_copy.get("staffId", ""),
-            "name": s_copy.get("name", ""),
-            "surname": s_copy.get("surname", ""),
-            "email": s_copy.get("email", ""),
-            "phone": s_copy.get("phone", ""),
-            "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
-            "assignedTrainees": s_copy["assignedTrainees"],
-            "lessonPlans": s_copy["lessonPlans"],
-            "schedules": s_copy["schedules"]
+            notifications.append(notification)
+            users_data["notifications"] = notifications
+
+            # Save changes
+            users_data["supervisor_schedule"] = [
+                s if s["id"] != observation_id else schedule for s in users_data.get("supervisor_schedule", [])
+            ]
+            save_users(users_data)
+
+        # Prepare response
+        response_schedule = {
+            "id": schedule["id"],
+            "supervisorId": schedule["supervisorId"],
+            "traineeId": schedule["traineeId"],
+            "lesson_plan_id": schedule["lesson_plan_id"],
+            "date": schedule["date"],
+            "start_time": normalize_time(schedule["start_time"]),
+            "end_time": normalize_time(schedule["end_time"]),
+            "status": schedule["status"],
+            "created_at": normalize_datetime(schedule["created_at"]),
+            "lessonPlanTitle": schedule.get("lessonPlanTitle", lesson_plan_title),
+            "traineeName": schedule.get("traineeName", "Unknown Trainee"),
         }
-        
-        logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
-        response = jsonify(safe_supervisor)
+
+        logger.info(f"Observation {observation_id} status updated to {data['status']} by supervisor {resolved_supervisor_id}")
+        response = jsonify({
+            "message": "Observation status updated successfully",
+            "schedule": response_schedule,
+        })
         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
         response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
-    
+
     except Exception as e:
-        logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
-        return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
+        logger.error(f"Error updating observation status {observation_id}: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to update observation status", "details": str(e)}), 500
 
 
 
 
 
-# @app.route("/api/getsuperV/<id>", methods=["GET",])
-# @_require_auth(["teacherTrainee","admin"])
-# def get_traineer_profiles(decoded,id):
+
+
+
+
+
+
+
+
+
+
+
+
+
+def normalize_time(time_str):
+    return time_str if time_str else None
+
+def normalize_datetime(dt_str):
+    return dt_str if dt_str else datetime.now().isoformat()
+
+
+# @app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
+# def get_supervisor_profile(id):
 #     if request.method == "OPTIONS":
-#         logger.debug(f"Handling OPTIONS for /api/trainees/me, headers: {request.headers}")
+#         logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
 #         response = jsonify({"status": "ok"})
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-#         response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-#         logger.debug(f"OPTIONS response headers for /api/trainees/me: {response.headers}")
 #         return response, 200
     
-#     # decoded, error_response = require_auth(["admin"])
-#     # if error_response:
-#     #     return jsonify(error_response), error_response["status"]
+#     decoded, error_response = require_auth(["supervisor", "admin"])
+#     if error_response:
+#         return jsonify(error_response), error_response["status"]
     
 #     try:
+#         supervisor_id = get_user_id(id,users)
+#         # Validate supervisor exists
+#         supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id ), None)
+#         if not supervisor:
+#             logger.warning(f"Supervisor not found for id/staffId: {id}")
+#             return jsonify({"error": f"Supervisor not found: {id}"}), 404
         
-#         users_data = load_users()
-#         if not users_data:
-#             logger.error("Failed to load users data")
-#             response = jsonify({"error": "Internal server error: Users data unavailable"})
-#             response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#             response.headers["Access-Control-Allow-Credentials"] = "true"
-#             return response, 500
-
-#         supervisors = users_data.get("supervisor", [])
-#         if not teacher_trainees:
-#             logger.error("No teacher trainees found in users data")
-#             response = jsonify({"error": "Internal server error: No trainees available"})
-#             response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#             response.headers["Access-Control-Allow-Credentials"] = "true"
-#             return response, 500
-
-#         trainee = next((t for t in teacher_trainees if t["id"] == id or t["regNo"] == id), None)
-#         if not trainee:
-#             logger.warning(f"Trainee not found for id/regNo: {id}")
-#             response = jsonify({"error": f"Trainee not found: {id}"})
-#             response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#             response.headers["Access-Control-Allow-Credentials"] = "true"
-#             return response, 404
-
-#         if decoded["role"] == "teacherTrainee" and trainee["regNo"] != decoded["identifier"]:
-#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access trainee {id}")
-#             response = jsonify({"error": "Unauthorized: You can only access your own profile"})
-#             response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#             response.headers["Access-Control-Allow-Credentials"] = "true"
-#             return response, 403
+#         # Access control
+#         if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
+#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
+#             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
         
-#         logger.debug(f"Found trainee: {trainee['id']} for id/regNo: {id}")     
+#         # Enrich supervisor data
+#         s_copy = supervisor.copy()
 
-#         # Enrich trainee data
-#         t_copy = trainee.copy()
+ 
         
-#         # Get TP assignment details with enhanced status logic
-#         assignment = get_trainee_assignment(t_copy["id"])
-#         if assignment:
-#             status = "Assigned"
-#             try:
-#                 current_date = datetime.now(timezone.utc).date()
-#                 start_date = None
-#                 end_date = None
-#                 if assignment["startDate"]:
-#                     try:
-#                         start_date = datetime.strptime(assignment["startDate"], "%Y-%m-%d").date()
-#                     except ValueError:
-#                         logger.warning(f"Invalid startDate format for trainee {trainee['id']}: {assignment['startDate']}")
-#                 if assignment["endDate"]:
-#                     try:
-#                         end_date = datetime.strptime(assignment["endDate"], "%Y-%m-%d").date()
-#                     except ValueError:
-#                         logger.warning(f"Invalid endDate format for trainee {trainee['id']}: {assignment['endDate']}")
-                
-#                 if not assignment["supervisorId"] or assignment["supervisorName"] == "Not Assigned" or not assignment["placeOfTP"]:
-#                     status = "Not Assigned"
-#                 elif start_date and end_date:
-#                     if current_date < start_date:
-#                         status = "Pending"
-#                     elif current_date > end_date:
-#                         status = "Completed"
-#             except Exception as e:
-#                 logger.error(f"Error processing TP assignment dates for trainee {trainee['id']}: {str(e)}")
-#                 status = "Not Assigned"
-            
-#             t_copy["tpAssignment"] = {
-#                 "supervisorName": assignment["supervisorName"],
-#                 "placeOfTP": assignment["placeOfTP"],
-#                 "startDate": assignment["startDate"],
-#                 "endDate": assignment["endDate"],
-#                 "status": status
+#         # Get assigned trainees
+#         assignments = users.get("tp_assignments", [])
+#         trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
+#         trainees = [
+#             {
+#                 "id": t["id"],
+#                 "name": t["name"],
+#                 "surname": t["surname"],
+#                 "regNo": t["regNo"],
+#                 "email": t["email"]
 #             }
-#         else:
-#             t_copy["tpAssignment"] = {
-#                 "supervisorName": "Not Assigned",
-#                 "placeOfTP": "Not Assigned",
-#                 "startDate": "",
-#                 "endDate": "",
-#                 "status": "Not Assigned"
-#             }
-#         logger.debug(f"TP assignment for trainee {trainee['id']}: {t_copy['tpAssignment']}")
-
-#         # Get lesson plans with relaxed validation
-#         lesson_plans = [
-#             lp for lp in users_data.get("lesson_plans", [])
-#             if lp.get("traineeId") == t_copy["id"]
+#             for t in users.get("teacherTrainee", [])
+#             if t["id"] in trainee_ids
 #         ]
-#         t_copy["lessonPlans"] = [
+#         s_copy["assignedTrainees"] = trainees
+      
+        
+#         # Get lesson plans
+#         lesson_plans = [
+#             lp for lp in users.get("lesson_plans", [])
+#             if lp.get("supervisorId") == supervisor["id"]
+#         ]
+#         s_copy["lessonPlans"] = [
 #             {
 #                 "id": lp.get("id", ""),
+#                 "traineeId": lp.get("traineeId", ""),
+#                 "supervisorId":lp.get("supervisorId",""),
 #                 "title": lp.get("title", "Untitled"),
-#                 "subject": lp.get("subject", ""),
-#                 "date": lp.get("date", ""),
-#                 "startTime": lp.get("startTime", ""),
-#                 "endTime": lp.get("endTime", ""),
-#                 "status": lp.get("status", "PENDING"),
-#                 "createdAt": lp.get("createdAt", ""),
+#                 "subject": lp.get("subject", "Unknown"),
+#                 "class": lp.get("class", "Unknown"),
+#                 "date": lp.get("date", datetime.now().strftime("%Y-%m-%d")),
+#                 "startTime": normalize_time(lp.get("startTime", None)),
+#                 "endTime": normalize_time(lp.get("endTime", None)),
 #                 "objectives": lp.get("objectives", ""),
 #                 "activities": lp.get("activities", ""),
 #                 "resources": lp.get("resources", ""),
+#                 "createdAt": normalize_datetime(lp.get("createdAt", datetime.now().isoformat())),
+#                 "status": lp.get("status", "PENDING"),
 #                 "aiGenerated": lp.get("aiGenerated", False),
-#                 "traineeName": lp.get("traineeName", ""),
-#                 "supervisorName": lp.get("supervisorName", ""),
-#                 "schoolName": lp.get("schoolName", ""),
-#                 "pdfUrl": lp.get("pdfUrl", "")
+#                 "traineeName": next(
+#                     (t["name"] + " " + t["surname"] for t in trainees if t["id"] == lp.get("traineeId")),
+#                     "Unknown"
+#                 ),
+#                 "supervisorName": f"{supervisor['name']} {supervisor['surname']}",
+#                 "schoolName": next(
+#                     (s["name"] for s in users.get("schools", []) if s.get("traineeId") == lp.get("traineeId")),
+#                     "Unknown"
+#                 ),
+#                 "pdfUrl": lp.get("pdfUrl", None)
 #             }
 #             for lp in lesson_plans
 #         ]
-#         logger.debug(f"Found {len(lesson_plans)} lesson plans for trainee {trainee['id']}")
-   
-   
-#         # Ensure all required fields with defaults
-#         safe_trainee = {
-#             "id": t_copy.get("id", ""),
-#             "regNo": t_copy.get("regNo", ""),
-#             "name": t_copy.get("name", ""),
-#             "surname": t_copy.get("surname", ""),
-#             "email": t_copy.get("email", ""),
-#             "bloodType":t_copy.get("bloodType", ""),
-#             "sex": t_copy.get("sex", ""),
-#             "phone": t_copy.get("phone", ""),
-#             "birthday": t_copy.get("birthday", ""),
-#             "progress": str(t_copy.get("progress", "0")),  # Ensure string for frontend
-#             "img": t_copy.get("img", ""),
-#             "createdAt": t_copy.get("createdAt", ""),
-#             "tpAssignment": t_copy["tpAssignment"],
-#             "lessonPlans": t_copy["lessonPlans"]
-#         }
         
-#         logger.info(f"Fetched profile for trainee {decoded['identifier']}")
-#         response = jsonify(safe_trainee)
+         
+
+       
+
+#         # Log missing fields
+#         for lp in s_copy["lessonPlans"]:
+#             missing_fields = []
+#             required_fields = ["supervisorName", "schoolName", "class", "traineeName", "objectives", "activities", "resources"]
+#             for field in required_fields:
+#                 if not lp.get(field) or lp.get(field) == "Unknown":
+#                     missing_fields.append(field)
+#             if missing_fields:
+#                 logger.warning(f"Lesson plan ID {lp['id']} missing fields: {missing_fields}, LessonPlan: {lp}")
+        
+#         # Get observation schedules
+#         schedules = [
+#             s for s in users.get("supervisor_schedule", [])
+#             if s["supervisorId"] == supervisor["id"]
+#         ]
+#         s_copy["schedules"] = [
+#             {
+#                 "id": s.get("id", ""),
+#                 "lesson_plan_id": s.get("lesson_plan_id", ""),
+#                 "traineeId": s.get("traineeId", ""),
+#                 "date": s.get("date", ""),
+#                 "start_time": normalize_time(s.get("start_time", "")),
+#                 "end_time": normalize_time(s.get("end_time", "")),
+#                 "status": s.get("status", "SCHEDULED"),
+#                 "created_at": normalize_datetime(s.get("created_at", ""))
+#             }
+#             for s in schedules
+#         ]
+        
+#         # Ensure all required fields with defaults
+#         safe_supervisor = {
+#             "id": s_copy.get("id", ""),
+#             "staffId": s_copy.get("staffId", ""),
+#             "name": s_copy.get("name", ""),
+#             "surname": s_copy.get("surname", ""),
+#             "email": s_copy.get("email", ""),
+#             "phone": s_copy.get("phone", ""),
+#             "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
+#             "assignedTrainees": s_copy["assignedTrainees"],
+#             "lessonPlans": s_copy["lessonPlans"],
+#             "schedules": s_copy["schedules"]
+#         }
+#         # print(f"SUPERVISOR DATA: ",safe_supervisor["lessonPlans"] )
+        
+#         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
+#         response = jsonify(safe_supervisor)
 #         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
 #         response.headers["Access-Control-Allow-Credentials"] = "true"
 #         return response, 200
     
 #     except Exception as e:
-#         logger.error(f"Error fetching trainee profile: {str(e)}", exc_info=True)
-#         return jsonify({"error": "Failed to fetch trainee profile", "details": str(e)}), 500
+#         logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
+#         return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
+
+
+# @app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
+# def get_supervisor_profile(id):
+#     if request.method == "OPTIONS":
+#         logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
+#         response = jsonify({"status": "ok"})
+#         return response, 200
+    
+#     decoded, error_response = require_auth(["supervisor", "admin"])
+#     if error_response:
+#         return jsonify(error_response), error_response["status"]
+    
+#     try:
+#         users_data=load_users()
+#         supervisor_id = get_user_id(id, users_data)
+#         # Validate supervisor exists
+#         supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == supervisor_id), None)
+#         if not supervisor:
+#             logger.warning(f"Supervisor not found for id/staffId: {id}")
+#             return jsonify({"error": f"Supervisor not found: {id}"}), 404
+        
+#         # Access control
+#         if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
+#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
+#             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
+        
+#         # Enrich supervisor data
+#         s_copy = supervisor.copy()
+        
+#         # Get assigned trainees
+#         assignments = users_data.get("tp_assignments", [])
+#         trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
+#         trainees = [
+#             {
+#                 "id": t["id"],
+#                 "name": t["name"],
+#                 "surname": t["surname"],
+#                 "regNo": t["regNo"],
+#                 "email": t["email"]
+#             }
+#             for t in users_data.get("teacherTrainee", [])
+#             if t["id"] in trainee_ids
+#         ]
+#         s_copy["assignedTrainees"] = trainees
+        
+#         # Get lesson plans, sorted by createdAt descending
+#         lesson_plans = sorted(
+#             [
+#                 lp for lp in users_data.get("lesson_plans", [])
+#                 if lp.get("supervisorId") == supervisor["id"]
+#             ],
+#             key=lambda lp: lp.get("createdAt", datetime.now().isoformat()),
+#             reverse=True
+#         )
+#         s_copy["lessonPlans"] = [
+#             {
+#                 "id": lp.get("id", ""),
+#                 "traineeId": lp.get("traineeId", ""),
+#                 "supervisorId": lp.get("supervisorId", ""),
+#                 "title": lp.get("title", "Untitled"),
+#                 "subject": lp.get("subject", "Unknown"),
+#                 "class": lp.get("class", "Unknown"),
+#                 "date": lp.get("date", datetime.now().strftime("%Y-%m-%d")),
+#                 "startTime": normalize_time(lp.get("startTime", None)),
+#                 "endTime": normalize_time(lp.get("endTime", None)),
+#                 "objectives": lp.get("objectives", ""),
+#                 "activities": lp.get("activities", ""),
+#                 "resources": lp.get("resources", ""),
+#                 "createdAt": normalize_datetime(lp.get("createdAt", datetime.now().isoformat())),
+#                 "status": lp.get("status", "PENDING"),
+#                 "aiGenerated": lp.get("aiGenerated", False),
+#                 "traineeName": next(
+#                     (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == lp.get("traineeId")),
+#                     lp.get("traineeId", "Unknown Trainee")
+#                 ),
+#                 "supervisorName": f"{supervisor['name']} {supervisor['surname']}",
+#                 "schoolName": next(
+#                     (s["name"] for s in users_data.get("schools", []) if s["id"] == lp.get("schoolId")),
+#                     "Not Assigned"
+#                 ),
+#                 "pdfUrl": lp.get("pdfUrl", None)
+#             }
+#             for lp in lesson_plans
+#         ]
+        
+#         # Validate lesson plan data
+#         valid_trainees = {t["id"] for t in users_data.get("teacherTrainee", [])}
+#         valid_schools = {s["id"] for s in users_data.get("schools", [])}
+#         for lp in s_copy["lessonPlans"]:
+#             if lp["traineeId"] not in valid_trainees:
+#                 logger.warning(f"Lesson plan {lp['id']} has invalid traineeId: {lp['traineeId']}")
+#             if lp.get("schoolId") and lp["schoolId"] not in valid_schools:
+#                 logger.warning(f"Lesson plan {lp['id']} has invalid schoolId: {lp['schoolId']}")
+            
+#             # Log missing fields
+#             missing_fields = []
+#             required_fields = ["supervisorName", "schoolName", "class", "traineeName", "objectives", "activities", "resources"]
+#             for field in required_fields:
+#                 if not lp.get(field) or lp.get(field) in ["Unknown", "Unknown Trainee", "Not Assigned"]:
+#                     missing_fields.append(field)
+#             if missing_fields:
+#                 logger.warning(f"Lesson plan ID {lp['id']} missing fields: {missing_fields}, LessonPlan: {lp}")
+        
+#         # Get observation schedules
+#         schedules = [
+#             s for s in users_data.get("supervisor_schedule", [])
+#             if s["supervisorId"] == supervisor["id"]
+#         ]
+#         # s_copy["schedules"] = [
+#         #     {
+#         #         "id": s.get("id", ""),
+#         #         "lesson_plan_id": s.get("lesson_plan_id", ""),
+#         #         "traineeId": s.get("traineeId", ""),
+#         #         "date": s.get("date", ""),
+#         #         "start_time": normalize_time(s.get("start_time", "")),
+#         #         "end_time": normalize_time(s.get("end_time", "")),
+#         #         "status": s.get("status", "SCHEDULED"),
+#         #         "created_at": normalize_datetime(s.get("created_at", ""))
+           
+
+
+#         #     }
+#         #     for s in schedules
+#         # ]
+    
+
+
+
+
+
+#         s_copy["schedules"] = [
+#                     {
+#                         "id": s.get("id", ""),
+#                         "lesson_plan_id": s.get("lesson_plan_id", ""),
+#                         "traineeId": s.get("traineeId", ""),
+#                         "date": s.get("date", ""),
+#                         "start_time": normalize_time(s.get("start_time", "")),
+#                         "end_time": normalize_time(s.get("end_time", "")),
+#                         "status": s.get("status", "SCHEDULED"),
+#                         "created_at": normalize_datetime(s.get("created_at", "")),
+#                         "lessonPlanTitle": s.get("lessonPlanTitle", next(
+#                             (lp["title"] for lp in lesson_plans if lp["id"] == s.get("lesson_plan_id")),
+#                             "Unknown Lesson Plan"
+#                         )),
+#                         "traineeName": s.get("traineeName", next(
+#                             (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == s.get("traineeId")),
+#                             "Unknown Trainee"
+#                         ))
+#                     }
+#                     for s in schedules
+#                 ]
+
+
+
+
+
+
+
+
+
+#         # Ensure all required fields with defaults
+#         safe_supervisor = {
+#             "id": s_copy.get("id", ""),
+#             "staffId": s_copy.get("staffId", ""),
+#             "name": s_copy.get("name", ""),
+#             "surname": s_copy.get("surname", ""),
+#             "email": s_copy.get("email", ""),
+#             "phone": s_copy.get("phone", ""),
+#             "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
+#             "assignedTrainees": s_copy["assignedTrainees"],
+#             "lessonPlans": s_copy["lessonPlans"],
+#             "schedules": s_copy["schedules"]
+#         }
+        
+#         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
+#         response = jsonify(safe_supervisor)
+#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+#         response.headers["Access-Control-Allow-Credentials"] = "true"
+#         return response, 200
+    
+#     except Exception as e:
+#         logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
+#         return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
+
+
+
 
 
 
@@ -5590,65 +5703,126 @@ def generate_ai_lesson_plan():
 
 
 
+# PDF generation
+def save_pdf(data, lesson_plan_id):
+    output_dir = "static/pdfs"
+    os.makedirs(output_dir, exist_ok=True)
+    pdf_path = os.path.join(output_dir, f"{lesson_plan_id}.pdf")
 
+    try:
+        # Create PDF with ReportLab
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
 
+        # Add title
+        title = h.handle(data.get('title', 'Lesson Plan')).strip()
+        story.append(Paragraph(title, styles['Title']))
+        story.append(Spacer(1, 12))
 
+        # Add metadata
+        metadata = [
+            f"Subject: {data.get('subject', 'N/A')}",
+            f"Class: {data.get('class', 'N/A')}",
+            f"Date: {data.get('date', 'N/A')}",
+            f"Time: {data.get('startTime', 'N/A')} - {data.get('endTime', 'N/A')}",
+            f"School: {data.get('schoolName', 'N/A')}",
+            f"Trainee: {data.get('traineeName', 'N/A')}",
+            f"Supervisor: {data.get('supervisorName', 'N/A')}"
+        ]
+        for line in metadata:
+            story.append(Paragraph(line, styles['Normal']))
+            story.append(Spacer(1, 6))
 
+        # Add sections
+        sections = [
+            ('Objectives', data.get('objectives', '')),
+            ('Activities', data.get('activities', '')),
+            ('Resources', data.get('resources', ''))
+        ]
+        for title, content in sections:
+            story.append(Paragraph(title, styles['Heading2']))
+            plain_text = h.handle(content).strip()
+            story.append(Paragraph(plain_text, styles['Normal']))
+            story.append(Spacer(1, 12))
 
+        # Build PDF
+        doc.build(story)
+        return f"/{pdf_path}"
+    except Exception as e:
+        raise Exception(f"PDF generation failed: {str(e)}")
 
+@app.route('/api/lesson-plans/generate-pdf', methods=['POST'])
+@_require_auth(["teacherTrainee"])
+def generate_pdf(decoded):
+    try:
+        users_data = load_users()
+        trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
+        if not trainee:
+            logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
+            return jsonify({"error": "Trainee not found"}), 404
 
+        data = request.get_json()
+        lesson_plan_id = data.get('lesson_plan_id')
+        if not lesson_plan_id or not data:
+            logger.error("Missing lesson_plan_id or content")
+            return jsonify({"error": "Lesson plan ID and content are required"}), 400
 
+        lesson_plans = users_data.get("lesson_plans", [])
+        lesson_plan = next((lp for lp in lesson_plans if lp["id"] == lesson_plan_id and lp["traineeId"] == trainee["id"]), None)
+        if not lesson_plan:
+            logger.warning(f"Lesson plan {lesson_plan_id} not found or not owned by trainee {trainee['id']}")
+            return jsonify({"error": "Lesson plan not found or you lack permission"}), 404
 
+        # Validate required fields
+        required_fields = ["title", "subject", "class", "date", "objectives", "activities", "resources"]
+        if not all(field in data for field in required_fields):
+            logger.error(f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}")
+            return jsonify({"error": f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}"}), 400
 
+        # Sanitize and normalize input
+        sanitized_data = {
+            "title": sanitize_html(data["title"]),
+            "subject": sanitize_html(data["subject"]),
+            "class": sanitize_html(data["class"]),
+            "date": data["date"],
+            "startTime": normalize_time(data.get("startTime")),
+            "endTime": normalize_time(data.get("endTime")),
+            "objectives": sanitize_html(data["objectives"]),
+            "activities": sanitize_html(data["activities"]),
+            "resources": sanitize_html(data["resources"]),
+            "schoolName": lesson_plan.get("schoolName", "N/A"),
+            "traineeName": lesson_plan.get("traineeName", "N/A"),
+            "supervisorName": lesson_plan.get("supervisorName", "N/A")
+        }
 
+        # Generate PDF
+        pdf_url = save_pdf(sanitized_data, lesson_plan_id)
 
+        # Update lesson plan with pdfUrl
+        with lock:
+            lesson_plan["pdfUrl"] = pdf_url
+            users_data["lesson_plans"] = [lp if lp["id"] != lesson_plan_id else lesson_plan for lp in lesson_plans]
+            save_users(users_data)
 
-
-
-
-# def get_trainee_assignment(trainee_id: str) -> Optional[dict]:
-#     assignment = next((a for a in users.get("tp_assignments", []) if a["traineeId"] == trainee_id), None)
-#     if not assignment:
-#         return None
-    
-#     schools = users.get("schools", [])
-#     school = next((s for s in schools if s["id"] == assignment["schoolId"]), None)
-#     school_name = school["name"] if school else "Unknown School"
-    
-#     supervisor_user_id = assignment.get("supervisorId")
-#     supervisor_name = "Not Assigned"
-#     supervisor_staffid = ""
-#     if supervisor_user_id:
-#         supervisors = users.get("supervisor", [])
-#         supervisor = next((s for s in supervisors if s["id"] == supervisor_user_id), None)
-#         if supervisor:
-#             supervisor_name = f"{supervisor['name']} {supervisor['surname']}"
-#             supervisor_staffid = supervisor.get("staffid", "")
-    
-#     return {
-#         "supervisorId": supervisor_staffid,  # Return staffid
-#         "supervisorName": supervisor_name,
-#         "placeOfTP": school_name,
-#         "traineeId": assignment["traineeId"],
-#         "schoolId": assignment["schoolId"],
-#         "startDate": assignment["startDate"],
-#         "endDate": assignment["endDate"]
-#     }
-
-
-
-
-
-
+        logger.info(f"PDF generated for lesson plan {lesson_plan_id} by trainee {trainee['regNo']}")
+        response = jsonify({"pdfUrl": pdf_url})
+        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 200
+    except Exception as e:
+        logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Failed to generate PDF: {str(e)}"}), 500
 
 
 
 @app.route("/api/supervisor/trainees", methods=["GET", "OPTIONS"])
-def get_supervisor_trainees():
+def get_super_trainees():
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
     
     decoded, error_response = require_auth("supervisor")
+   
     if error_response:
         return error_response
     
@@ -5660,13 +5834,15 @@ def get_supervisor_trainees():
         
         # Get supervisor's user ID
         supervisor_user_id = decoded["identifier"]
-        
+        supervisor = next((s for s in users.get("supervisor", []) if s["staffId"] == supervisor_user_id), None)
         # Get trainees assigned to this supervisor
         assignments = users.get("tp_assignments", [])
-        trainee_ids = [a["traineeId"] for a in assignments if a.get("supervisorStaffId") == supervisor_user_id]
         trainees = users.get("teacherTrainee", [])
+        
+        trainee_ids = [a["traineeId"] for a in assignments if a.get("supervisorId") == supervisor["id"]]
         trainees = [t for t in trainees if t["id"] in trainee_ids]
         
+              
         # Apply search filter
         if search:
             trainees = [
@@ -5690,7 +5866,7 @@ def get_supervisor_trainees():
             assignment = get_trainee_assignment(trainee["id"])
             sanitized_trainee = {
                 **{k: v for k, v in trainee.items() if k != "password"},
-                "supervisorId": assignment["supervisorId"] if assignment else "",  # staffid
+                "supervisorId": assignment["supervisorStaffId"] if assignment else "",  # staffid
                 "supervisorName": assignment["supervisorName"] if assignment else "Not Assigned",
                 "placeOfTP": assignment["placeOfTP"] if assignment else "Not Assigned"
             }
@@ -5702,7 +5878,7 @@ def get_supervisor_trainees():
         start = (page - 1) * per_page
         end = start + per_page
         paginated_trainees = sanitized_trainees[start:end]
-        
+        # print(f"paginated_trainees: {sanitized_trainees}")
         return jsonify({
             "trainees": paginated_trainees,
             "totalCount": total,
@@ -5713,138 +5889,6 @@ def get_supervisor_trainees():
     except Exception as e:
         print(f"Error in get_supervisor_trainees: {str(e)}")
         return jsonify({"error": "Failed to fetch trainees", "details": str(e)}), 500
-
-
-
-
-
-
-
-# @app.route("/api/trainees/bulk", methods=["POST", "OPTIONS"])
-# def bulk_create_trainees():
-#     if request.method == "OPTIONS":
-#         return jsonify({"status": "ok"}), 200
-    
-#     decoded, error_response = require_auth()
-#     if error_response:
-#         return error_response
-    
-#     if decoded["role"] != "admin":
-#         return jsonify({"error": "Unauthorized: Only admins can bulk create trainees"}), 403
-    
-#     if "file" not in request.files:
-#         return jsonify({"error": "No file provided"}), 400
-    
-#     file = request.files["file"]
-    
-#     if not file.filename.endswith(".csv"):
-#         return jsonify({"error": "File must be a CSV"}), 400
-    
-#     supervisor_staffid = request.form.get("supervisorId", "")
-#     school_id = request.form.get("schoolId", "")
-    
-#     supervisor_user_id = ""
-#     if supervisor_staffid:
-#         supervisors = users.get("supervisor", [])
-#         supervisor = next((s for s in supervisors if s.get("staffid") == supervisor_staffid), None)
-#         if not supervisor:
-#             return jsonify({"error": f"Supervisor with staffid {supervisor_staffid} not found"}), 404
-#         supervisor_user_id = supervisor["id"]
-#     if school_id:
-#         schools = users.get("schools", [])
-#         if not any(s.get("id") == school_id for s in schools):
-#             return jsonify({"error": f"School with ID {school_id} not found"}), 404
-    
-#     stream = io.StringIO(file.stream.read().decode("UTF-8"))
-#     csv_reader = csv.DictReader(stream)
-    
-#     required_fields = ["regNo", "name", "surname", "email", "password", "phone", "address", "bloodType", "sex", "birthday"]
-#     optional_fields = ["img", "supervisorId", "schoolId"]
-    
-#     missing_fields = [field for field in required_fields if field not in csv_reader.fieldnames]
-#     if missing_fields:
-#         return jsonify({"error": "CSV missing required fields: " + ", ".join(missing_fields)}), 400
-    
-#     trainees = users.get("teacherTrainee", [])
-#     assignments = users.get("tp_assignments", [])
-#     created_trainees = []
-#     created_assignments = []
-#     errors = []
-    
-#     for row in csv_reader:
-#         if row["sex"] not in ["MALE", "FEMALE"]:
-#             errors.append(f"Invalid sex value for regNo {row['regNo']}: must be 'MALE' or 'FEMALE'")
-#             continue
-        
-#         if any(t["regNo"] == row["regNo"] for t in trainees):
-#             errors.append(f"Trainee with regNo {row['regNo']} already exists")
-#             continue
-#         if any(t["email"] == row["email"] for t in trainees):
-#             errors.append(f"Trainee with email {row['email']} already exists")
-#             continue
-        
-#         try:
-#             hashed_password = bcrypt.hashpw(row["password"].encode(), bcrypt.gensalt())
-#         except Exception as e:
-#             errors.append(f"Error hashing password for regNo {row['regNo']}: {str(e)}")
-#             continue
-        
-#         row_supervisor_staffid = row.get("supervisorId", supervisor_staffid)
-#         row_supervisor_user_id = ""
-#         if row_supervisor_staffid:
-#             supervisors = users.get("supervisor", [])
-#             supervisor = next((s for s in supervisors if s.get("staffid") == row_supervisor_staffid), None)
-#             if not supervisor:
-#                 errors.append(f"Invalid supervisorId (staffid) {row_supervisor_staffid} for regNo {row['regNo']}")
-#                 continue
-#             row_supervisor_user_id = supervisor["id"]
-#         row_school_id = row.get("schoolId", school_id)
-#         if row_school_id:
-#             schools = users.get("schools", [])
-#             if not any(s.get("id") == row_school_id for s in schools):
-#                 errors.append(f"Invalid schoolId {row_school_id} for regNo {row['regNo']}")
-#                 continue
-        
-#         new_trainee = {
-#             "id": generate_unique_id(),
-#             "regNo": row["regNo"],
-#             "password": hashed_password.decode("utf-8"),
-#             "email": row["email"],
-#             "role": "teacherTrainee",
-#             "name": row["name"],
-#             "surname": row["surname"],
-#             "phone": row["phone"],
-#             "address": row["address"],
-#             "bloodType": row["bloodType"],
-#             "sex": row["sex"],
-#             "birthday": row["birthday"],
-#             "progress": 0,
-#             "img": row.get("img", ""),
-#             "createdAt": datetime.now().isoformat() + "Z"
-#         }
-        
-#         trainees.append(new_trainee)
-#         created_trainees.append({k: v for k, v in new_trainee.items() if k != "password"})
-        
-#         if row_supervisor_user_id or row_school_id:
-#             new_assignment = {
-#                 "traineeId": new_trainee["id"],
-#                 "supervisorId": row_supervisor_user_id or "",
-#                 "schoolId": row_school_id or "default-school-id",
-#                 "startDate": datetime.now().isoformat() + "Z",
-#                 "endDate": (datetime.now() + timedelta(days=365)).isoformat() + "Z"
-#             }
-#             assignments.append(new_assignment)
-#             created_assignments.append(new_assignment)
-    
-#     if errors:
-#         return jsonify({"message": "Some trainees were not created", "errors": errors, "created": created_trainees, "assignments": created_assignments}), 207
-    
-#     users["teacherTrainee"] = trainees
-#     users["tp_assignments"] = assignments
-#     save_users(users)
-    
-#     return jsonify({"message": "Trainees created successfully", "created": created_trainees, "assignments": created_assignments}), 201
 
 
 
