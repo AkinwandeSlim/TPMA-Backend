@@ -86,6 +86,7 @@ users = load_users()
 
 
 
+
 # Authentication decorator
 def _require_auth(allowed_roles: Optional[list] = None):
     def decorator(f):
