@@ -40,20 +40,14 @@ from flask import send_file
 
 load_dotenv()
 
-# # Set up allowed websites from an environment variable
-# ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-
-
-# Configure CORS
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Local development
-    "https://tpma-frontend.vercel.app"  # Production frontend
-]
-
 
 
 
 app = Flask(__name__)
+
+
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,https://tpma-frontend.vercel.app").split(",")
+
 CORS(app, resources={
     r"/api/*": {
         "origins": ALLOWED_ORIGINS,
@@ -62,7 +56,6 @@ CORS(app, resources={
         "supports_credentials": True
     }
 })
-
 
 SECRET_KEY = "TPMA2025"
 USERS_FILE = "users.json"
@@ -120,13 +113,10 @@ def _require_auth(allowed_roles: Optional[list] = None):
 
 
 
-# Error Handlers
+
 @app.errorhandler(404)
 def handle_not_found(e):
     response = jsonify({"error": "Not Found", "message": str(e)})
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
-    response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
     return response, 404
 
 @app.errorhandler(Exception)
@@ -134,20 +124,16 @@ def handle_exception(e: Exception) -> Tuple[dict, int]:
     logger.error(f"Unhandled exception: {str(e)}\n{traceback.format_exc()}")
     response = jsonify({"error": "Internal Server Error", "message": str(e)})
     response.status_code = 500
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
-    response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
     return response, 500
+
+
+
+
 
 @app.route('/api/<path:path>', methods=['OPTIONS'])
 def options_handler(path):
     logger.debug(f"Handling OPTIONS request for /api/{path}, headers: {request.headers}")
     response = jsonify({"message": "CORS preflight"})
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
-    response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    response.headers.add("Access-Control-Allow-Headers", "Authorization, Content-Type")
-    response.headers.add("Access-Control-Allow-Credentials", "true")
-    logger.debug(f"OPTIONS response headers: {response.headers}")
     return response, 200
 
 
@@ -3204,10 +3190,10 @@ def get_trainee_profile():
             "lessonPlans": t_copy["lessonPlans"]
         }
         
-        logger.info(f"Fetched profile for trainee {decoded['identifier']}")
-        response = jsonify(safe_trainee)
+        logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
+        response = jsonify(safe_supervisor)
         return response, 200
-    
+ 
     except Exception as e:
         logger.error(f"Error fetching trainee profile: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to fetch trainee profile", "details": str(e)}), 500
@@ -3344,8 +3330,6 @@ def create_lesson_plan(decoded):
 
         logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['id']}")
         response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 201
     except Exception as e:
         logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
@@ -3363,108 +3347,106 @@ def create_lesson_plan(decoded):
 # @app.route("/api/lesson-plans", methods=["POST"])
 # @_require_auth(["teacherTrainee"])
 # def create_lesson_plan(decoded):
-    try:
-        users_data = load_users()
-        trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
-        if not trainee:
-            logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
-            return jsonify({"error": "Trainee not found"}), 404
+    # try:
+    #     users_data = load_users()
+    #     trainee = next((t for t in users_data.get("teacherTrainee", []) if t["regNo"] == decoded["identifier"]), None)
+    #     if not trainee:
+    #         logger.error(f"Trainee not found for identifier: {decoded['identifier']}")
+    #         return jsonify({"error": "Trainee not found"}), 404
 
-        # Check for existing pending lesson plans
-        lesson_plans = users_data.get("lesson_plans", [])
-        pending_plans = [lp for lp in lesson_plans if lp["traineeId"] == trainee["id"] and lp["status"] == "PENDING"]
-        if pending_plans:
-            logger.warning(f"Trainee {trainee['id']} already has a pending lesson plan: {pending_plans[0]['id']}")
-            return jsonify({"error": "You already have a pending lesson plan. Please submit or delete it first."}), 400
+    #     # Check for existing pending lesson plans
+    #     lesson_plans = users_data.get("lesson_plans", [])
+    #     pending_plans = [lp for lp in lesson_plans if lp["traineeId"] == trainee["id"] and lp["status"] == "PENDING"]
+    #     if pending_plans:
+    #         logger.warning(f"Trainee {trainee['id']} already has a pending lesson plan: {pending_plans[0]['id']}")
+    #         return jsonify({"error": "You already have a pending lesson plan. Please submit or delete it first."}), 400
 
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Request body must be JSON"}), 400
+    #     data = request.get_json()
+    #     if not data:
+    #         return jsonify({"error": "Request body must be JSON"}), 400
 
-        required_fields = ["title", "subject", "date", "objectives", "activities", "resources"]
-        if not all(field in data for field in required_fields):
-            return jsonify({"error": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
+    #     required_fields = ["title", "subject", "date", "objectives", "activities", "resources"]
+    #     if not all(field in data for field in required_fields):
+    #         return jsonify({"error": "Missing required fields: " + ", ".join(f for f in required_fields if f not in data)}), 400
 
-        try:
-            lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
-        except ValueError:
-            return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
+    #     try:
+    #         lesson_date = datetime.strptime(data["date"], "%Y-%m-%d")
+    #     except ValueError:
+    #         return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
 
-        # Normalize times, make optional
-        start_time = normalize_time(data.get("startTime")) if data.get("startTime") else None
-        end_time = normalize_time(data.get("endTime")) if data.get("endTime") else None
-        if start_time and end_time:
-            start_parts = start_time.split(":")
-            end_parts = end_time.split(":")
-            start_dt = lesson_date.replace(hour=int(start_parts[0]), minute=int(start_parts[1]), second=0)
-            end_dt = lesson_date.replace(hour=int(end_parts[0]), minute=int(end_parts[1]), second=0)
-            if end_dt <= start_dt:
-                return jsonify({"error": "End time must be after start time"}), 400
+    #     # Normalize times, make optional
+    #     start_time = normalize_time(data.get("startTime")) if data.get("startTime") else None
+    #     end_time = normalize_time(data.get("endTime")) if data.get("endTime") else None
+    #     if start_time and end_time:
+    #         start_parts = start_time.split(":")
+    #         end_parts = end_time.split(":")
+    #         start_dt = lesson_date.replace(hour=int(start_parts[0]), minute=int(start_parts[1]), second=0)
+    #         end_dt = lesson_date.replace(hour=int(end_parts[0]), minute=int(end_parts[1]), second=0)
+    #         if end_dt <= start_dt:
+    #             return jsonify({"error": "End time must be after start time"}), 400
 
-        # assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
+    #     # assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee["id"]), None)
  
-        assignment=get_trainee_assignment(trainee["id"])
+    #     assignment=get_trainee_assignment(trainee["id"])
  
-        if not assignment:
-            return jsonify({"error": "No TP assignment found for this trainee"}), 400
+    #     if not assignment:
+    #         return jsonify({"error": "No TP assignment found for this trainee"}), 400
 
-        sanitized_data = {
-            "title": sanitize_html(data["title"]),
-            "subject": sanitize_html(data["subject"]),
-            "objectives": sanitize_html(data["objectives"]),
-            "class":sanitize_html(data["class"]),
-            "activities": sanitize_html(data["activities"]),
-            "resources": sanitize_html(data["resources"])
-        }
+    #     sanitized_data = {
+    #         "title": sanitize_html(data["title"]),
+    #         "subject": sanitize_html(data["subject"]),
+    #         "objectives": sanitize_html(data["objectives"]),
+    #         "class":sanitize_html(data["class"]),
+    #         "activities": sanitize_html(data["activities"]),
+    #         "resources": sanitize_html(data["resources"])
+    #     }
 
-        new_lesson_plan = {
-            "id": "lp"+ str(uuid.uuid4()),
-            "traineeId": str(trainee["id"]),
-            "supervisorId": str(assignment["supervisorId"]),
-            "schoolId": str(assignment["schoolId"]),
-            "title": sanitized_data["title"],
-            "subject": sanitized_data["subject"],
-            "class": sanitized_data["class"],
-            "date": data["date"],
-            "startTime": start_time,
-            "endTime": end_time,
-            "objectives": sanitized_data["objectives"],
-            "activities": sanitized_data["activities"],
-            "resources": sanitized_data["resources"],
-            "createdAt": datetime.now(timezone.utc).isoformat() + "Z",
-            "status": "PENDING",
-            "aiGenerated": bool(data.get("aiGenerated", False)),
-            "traineeName": f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip(),
-            "supervisorName": next((f"{s.get('name', '')} {s.get('surname', '')}".strip() for s in users_data.get("supervisor", []) if s["id"] == assignment["supervisorId"]), "Unknown"),
-            "schoolName": next((s["name"] for s in users_data.get("schools", []) if s["id"] == assignment["schoolId"]), "Unknown"),
-            "pdfUrl": data.get('pdfUrl')  # Store pdfUrl if provided
-        }
+    #     new_lesson_plan = {
+    #         "id": "lp"+ str(uuid.uuid4()),
+    #         "traineeId": str(trainee["id"]),
+    #         "supervisorId": str(assignment["supervisorId"]),
+    #         "schoolId": str(assignment["schoolId"]),
+    #         "title": sanitized_data["title"],
+    #         "subject": sanitized_data["subject"],
+    #         "class": sanitized_data["class"],
+    #         "date": data["date"],
+    #         "startTime": start_time,
+    #         "endTime": end_time,
+    #         "objectives": sanitized_data["objectives"],
+    #         "activities": sanitized_data["activities"],
+    #         "resources": sanitized_data["resources"],
+    #         "createdAt": datetime.now(timezone.utc).isoformat() + "Z",
+    #         "status": "PENDING",
+    #         "aiGenerated": bool(data.get("aiGenerated", False)),
+    #         "traineeName": f"{trainee.get('name', '')} {trainee.get('surname', '')}".strip(),
+    #         "supervisorName": next((f"{s.get('name', '')} {s.get('surname', '')}".strip() for s in users_data.get("supervisor", []) if s["id"] == assignment["supervisorId"]), "Unknown"),
+    #         "schoolName": next((s["name"] for s in users_data.get("schools", []) if s["id"] == assignment["schoolId"]), "Unknown"),
+    #         "pdfUrl": data.get('pdfUrl')  # Store pdfUrl if provided
+    #     }
 
-        with lock:
-            users_data["lesson_plans"] = lesson_plans + [new_lesson_plan]
-            notifications = users_data.get("notifications", [])
-            notification = {
-                "id": f"notif-{uuid.uuid4()}",
-                "user_id": assignment["supervisorId"],
-                "initiator_id": trainee["regNo"],
-                "type": "LESSON_PLAN",
-                "priority": "MEDIUM",
-                "message": f"New lesson plan submitted by {new_lesson_plan['traineeName']} for {new_lesson_plan['subject']} at {new_lesson_plan['schoolName']}.",
-                "created_at": datetime.now(timezone.utc).isoformat() + "Z",
-                "read_status": False
-            }
-            notifications.append(notification)
-            users_data["notifications"] = notifications
-            save_users(users_data)
+    #     with lock:
+    #         users_data["lesson_plans"] = lesson_plans + [new_lesson_plan]
+    #         notifications = users_data.get("notifications", [])
+    #         notification = {
+    #             "id": f"notif-{uuid.uuid4()}",
+    #             "user_id": assignment["supervisorId"],
+    #             "initiator_id": trainee["regNo"],
+    #             "type": "LESSON_PLAN",
+    #             "priority": "MEDIUM",
+    #             "message": f"New lesson plan submitted by {new_lesson_plan['traineeName']} for {new_lesson_plan['subject']} at {new_lesson_plan['schoolName']}.",
+    #             "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+    #             "read_status": False
+    #         }
+    #         notifications.append(notification)
+    #         users_data["notifications"] = notifications
+    #         save_users(users_data)
 
-        logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['regNo']}")
-        response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response, 201
-    except Exception as e:
-        logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Error: {str(e)}"}), 500
+    #     logger.info(f"Lesson plan created: {new_lesson_plan['id']} by trainee {trainee['regNo']}")
+    #     response = jsonify({"message": "Lesson plan created", "lessonPlan": new_lesson_plan})
+    #     return response, 201
+    # except Exception as e:
+    #     logger.error(f"Error creating lesson plan: {str(e)}", exc_info=True)
+    #     return jsonify({"error": f"Error: {str(e)}"}), 500
 
 @app.route("/api/lesson-plans/<id>", methods=["PUT"])
 @_require_auth(["teacherTrainee"])
@@ -3554,8 +3536,6 @@ def update_lesson_plan(decoded, id: str):
 
         logger.info(f"Lesson plan updated: {id} by trainee {trainee['regNo']}")
         response = jsonify({"message": "Lesson plan updated", "lessonPlan": lesson_plan})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     except Exception as e:
         logger.error(f"Error updating lesson plan: {str(e)}", exc_info=True)
@@ -3602,8 +3582,6 @@ def delete_lesson_plan(decoded, id: str):
 
         logger.info(f"Lesson plan deleted: {id} by trainee {trainee['regNo']}")
         response = jsonify({"message": "Lesson plan deleted"})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     except Exception as e:
         logger.error(f"Error deleting lesson plan: {str(e)}", exc_info=True)
@@ -3728,8 +3706,6 @@ def get_lesson_plans(decoded):
             "totalCount": total,
             "totalPages": total_pages
         })
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     except Exception as e:
         logger.error(f"Error fetching lesson plans: {str(e)}", exc_info=True)
@@ -3802,31 +3778,23 @@ def get_trainee_profiles(id):
         if not users_data:
             logger.error("Failed to load users data")
             response = jsonify({"error": "Internal server error: Users data unavailable"})
-            response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
             return response, 500
 
         teacher_trainees = users_data.get("teacherTrainee", [])
         if not teacher_trainees:
             logger.error("No teacher trainees found in users data")
             response = jsonify({"error": "Internal server error: No trainees available"})
-            response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
             return response, 500
 
         trainee = next((t for t in teacher_trainees if t["id"] == id or t["regNo"] == id), None)
         if not trainee:
             logger.warning(f"Trainee not found for id/regNo: {id}")
             response = jsonify({"error": f"Trainee not found: {id}"})
-            response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
             return response, 404
 
         if decoded["role"] == "teacherTrainee" and trainee["regNo"] != decoded["identifier"]:
             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access trainee {id}")
             response = jsonify({"error": "Unauthorized: You can only access your own profile"})
-            response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
             return response, 403
         
         logger.debug(f"Found trainee: {trainee['id']} for id/regNo: {id}")     
@@ -3931,8 +3899,6 @@ def get_trainee_profiles(id):
         
         logger.info(f"Fetched profile for trainee {decoded['identifier']}")
         response = jsonify(safe_trainee)
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     
     except Exception as e:
@@ -3988,9 +3954,6 @@ def get_supervisor_lesson_plans(supervisor_id):
 
 
 
-# @a
-
-
 
 
 
@@ -4001,11 +3964,9 @@ def get_supervisor_profile(id):
         logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
         response = jsonify({"status": "ok"})
         return response, 200
-    
     decoded, error_response = require_auth(["supervisor", "admin"])
     if error_response:
         return jsonify(error_response), error_response["status"]
-    
     try:
         users_data = load_users()
         supervisor_id = get_user_id(id, users_data)
@@ -4019,10 +3980,8 @@ def get_supervisor_profile(id):
         if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
-        
         # Enrich supervisor data
         s_copy = supervisor.copy()
-        
         # Get assigned trainees
         assignments = users_data.get("tp_assignments", [])
         trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
@@ -4177,16 +4136,12 @@ def get_supervisor_profile(id):
             "lessonPlans": s_copy["lessonPlans"],
             "schedules": s_copy["schedules"]
     
-
-
         }
         
         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
         response = jsonify(safe_supervisor)
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response, 200
-    
+        return response, 200 
+        
     except Exception as e:
         logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
@@ -4341,10 +4296,6 @@ def review_lesson_plan(supervisor_id, lesson_plan_id):
     except Exception as e:
         logger.error(f"Error reviewing lesson plan {lesson_plan_id}: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to review lesson plan", "details": str(e)}), 500
-
-
-
-
 
 
 # Supervisor Schedule Observation Endpoint
@@ -4720,8 +4671,6 @@ def get_supervisor_schedules(supervisor_id):
 
         logger.info(f"Fetched schedules for supervisor {supervisor_id}: {total_count} schedules")
         response = jsonify(response_data)
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
 
     except Exception as e:
@@ -5028,8 +4977,6 @@ def update_observation_status(supervisor_id, observation_id):
             "message": "Observation status updated successfully",
             "schedule": response_schedule,
         })
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
 
     except Exception as e:
@@ -5204,8 +5151,6 @@ def generate_pdf(decoded):
 
         logger.info(f"PDF generated for lesson plan {lesson_plan_id} by trainee {trainee['regNo']}")
         response = jsonify({"pdfUrl": pdf_url})
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     except Exception as e:
         logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
