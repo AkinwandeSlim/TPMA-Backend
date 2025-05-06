@@ -137,6 +137,9 @@ def options_handler(path):
     return response, 200
 
 
+
+
+
 @app.route('/api/notifications', methods=['GET', 'POST', 'OPTIONS'])
 def manage_notifications():
     if request.method == 'OPTIONS':
@@ -3191,7 +3194,7 @@ def get_trainee_profile():
         }
         
         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
-        response = jsonify(safe_supervisor)
+        response = jsonify(safe_trainee)
         return response, 200
  
     except Exception as e:
