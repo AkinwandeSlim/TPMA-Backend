@@ -40,8 +40,16 @@ from flask import send_file
 
 load_dotenv()
 
-# Set up allowed websites from an environment variable
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# # Set up allowed websites from an environment variable
+# ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
+
+# Configure CORS
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Local development
+    "https://tpma-frontend.vercel.app"  # Production frontend
+]
+
 
 
 
@@ -78,8 +86,6 @@ h.ignore_images = True
 
 
 
-# Mock users data (loaded from users.json)
-global users
 # Assume users is loaded via load_users() at app startup
 users = load_users()
 
@@ -143,8 +149,6 @@ def options_handler(path):
     response.headers.add("Access-Control-Allow-Credentials", "true")
     logger.debug(f"OPTIONS response headers: {response.headers}")
     return response, 200
-
-
 
 
 @app.route('/api/notifications', methods=['GET', 'POST', 'OPTIONS'])
@@ -319,11 +323,6 @@ def get_unread_notifications_count():
 
 
 
-
-
-
-
-
 @app.route('/api/notifications/<notification_id>', methods=['PUT', 'DELETE'])
 def update_delete_notification(notification_id):
     decoded, error_response = require_auth()
@@ -405,7 +404,6 @@ def update_delete_notification(notification_id):
 
 
 
-
 @app.route('/api/evaluations', methods=['POST'])
 def submit_evaluation():
     decoded, error_response = require_auth()
@@ -450,9 +448,6 @@ def submit_evaluation():
     except Exception as e:
         logger.error(f"Error submitting evaluation: {str(e)}")
         return jsonify({"error": "Failed to submit evaluation", "details": str(e)}), 500
-
-
-# Admins
 
 
 #Admin Routes
@@ -961,34 +956,6 @@ def manage_trainee(id):
 
 
 
-# @app.route("/api/tp-assignments/<trainee_id>", methods=["GET"])
-# def get_tp_assignment(trainee_id):
-#     decoded, error_response = require_admin_auth()
-#     if error_response:
-#         return error_response
-
-#     assignments = users.get("tp_assignments", [])
-#     assignment = None
-#     for a in assignments:
-#         if a["traineeId"] == trainee_id:
-#             assignment = a
-#             break
-
-#     if not assignment:
-#         return jsonify({"placeOfTP": "", "supervisorId": ""}), 200
-
-#     school = None
-#     for s in users.get("schools", []):
-#         if s["id"] == assignment["schoolId"]:
-#             school = s
-#             break
-
-#     return jsonify({
-#         "placeOfTP": school["name"] if school else "",
-#         "supervisorId": assignment["supervisorId"]
-#     }), 200
-
-
 @app.route('/api/tp-assignments/<trainee_id>', methods=['GET', 'OPTIONS'])
 @_require_auth(['admin', 'teacherTrainee'])
 def get_tp_assignment(decoded, trainee_id):
@@ -1445,62 +1412,6 @@ def update_tp_assignment(tp_assignment_id):
 
 
 
-
-# @app.route('/api/admin/tp_assignments/<tp_assignment_id>', methods=['PUT', 'OPTIONS'])
-# def update_tp_assignment(tp_assignment_id):
-#     if request.method == 'OPTIONS':
-#         response = jsonify({"status": "ok"})
-#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-#         response.headers['Access-Control-Allow-Credentials'] = 'true'
-#         response.headers['Access-Control-Allow-Methods'] = 'PUT, OPTIONS'
-#         response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
-#         return response, 200
-
-#     decoded, error_response = require_auth("admin")
-#     if error_response:
-#         response = jsonify(error_response[0])
-#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-#         response.headers['Access-Control-Allow-Credentials'] = 'true'
-#         return response, error_response[1]
-
-#     try:
-#         data = request.get_json() or {}
-#         required_fields = ['traineeId', 'schoolId', 'supervisorId']
-#         if not all(field in data for field in required_fields):
-#             logger.error(f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}")
-#             response = jsonify({"error": f"Missing required fields: {', '.join(f for f in required_fields if f not in data)}"})
-#             response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-#             response.headers['Access-Control-Allow-Credentials'] = 'true'
-#             return response, 400
-
-#         # ... (rest of the endpoint logic remains unchanged)
-
-#         logger.info(f"Updated TP assignment {tp_assignment_id} for trainee {data['traineeId']}")
-#         response = jsonify({
-#             'message': 'TP assignment updated successfully',
-#             'assignment': {
-#                 'id': updated_assignment['id'],
-#                 'traineeId': updated_assignment['traineeId'],
-#                 'schoolId': updated_assignment['schoolId'],
-#                 'supervisorId': updated_assignment['supervisorId'],
-#                 'startDate': updated_assignment['start_date'],
-#                 'endDate': updated_assignment['end_date'],
-#                 'placeOfTP': school_name,
-#                 'createdAt': updated_assignment['createdAt'],
-#                 'updatedAt': updated_assignment['updatedAt']
-#             },
-#             'notifications': [trainee_notification, supervisor_notification]
-#         })
-#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-#         response.headers['Access-Control-Allow-Credentials'] = 'true'
-#         return response, 200
-
-#     except Exception as e:
-#         logger.error(f"Error updating TP assignment {tp_assignment_id}: {str(e)}")
-#         response = jsonify({"error": "Failed to update TP assignment", "details": str(e)})
-#         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
-#         response.headers['Access-Control-Allow-Credentials'] = 'true'
-#         return response, 500
 
 
 
@@ -3295,8 +3206,6 @@ def get_trainee_profile():
         
         logger.info(f"Fetched profile for trainee {decoded['identifier']}")
         response = jsonify(safe_trainee)
-        response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         return response, 200
     
     except Exception as e:
@@ -4538,190 +4447,6 @@ def schedule_observation(supervisor_id):
         logger.error(f"Error scheduling observation: {str(e)}")
         return jsonify({"error": "Failed to schedule observation", "details": str(e)}), 500
 
-# # Supervisor Submit Observation Feedback Endpoint
-# @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
-# def submit_observation_feedback(supervisor_id, observation_id):
-#     decoded, error_response = require_auth("supervisor")
-#     if error_response:
-#         return jsonify(error_response), error_response["status"]
-    
-#     # Validate supervisor
-#     users_data=load_users()
-#     internal_supervisor_id=get_user_id(decoded["identifier"],users_data)
-#     supervisor = next((s for s in users.get("supervisor", []) if s["id"] == internal_supervisor_id), None)
-#     print
-   
-#     if not supervisor:
-#         return jsonify({"error": "Supervisor not found"}), 404
-#     if decoded["identifier"] != supervisor["staffId"]:
-#         return jsonify({"error": "Unauthorized: You can only submit feedback for your observations"}), 403
-    
-#     # Validate observation
-#     observation = next((o for o in users_data.get("observations", []) if o["id"] == observation_id and o["supervisorId"] == supervisor_id), None)
-#     if not observation:
-#         return jsonify({"error": "Observation not found or not assigned to you"}), 404
-#     if observation["status"] != "completed":
-#         return jsonify({"error": "Feedback can only be submitted for completed observations"}), 400
-    
-#     # Validate request data
-#     data = request.get_json() or {}
-#     required_fields = ["score", "comments"]
-#     if not all(field in data for field in required_fields):
-#         return jsonify({"error": "Missing required fields: score, comments"}), 400
-#     try:
-#         score = int(data["score"])
-#         if not 0 <= score <= 10:
-#             return jsonify({"error": "Score must be between 0 and 10"}), 400
-#     except (ValueError, TypeError):
-#         return jsonify({"error": "Score must be an integer"}), 400
-    
-#     try:
-#         with lock:
-#             # Update observation
-#             observation["score"] = score
-#             observation["comments"] = data["comments"]
-#             observation["completed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            
-#             # Add to observation_feedback for consistency with lesson plan feedback
-#             feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
-#             feedback = {
-#                 "id": feedback_id,
-#                 "lesson_plan_id": observation.get("lesson_plan_id", None),
-#                 "traineeId": observation["traineeId"],
-#                 "supervisorId": supervisor_id,
-#                 "score": score,
-#                 "comments": data["comments"],
-#                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
-#             }
-#             users.setdefault("observation_feedback", []).append(feedback)
-            
-#             # Notify trainee
-#             notifications = users.get("notifications", [])
-#             lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == observation.get("lesson_plan_id")), None)
-#             lesson_title = lesson_plan["title"] if lesson_plan else "Lesson"
-#             notification = {
-#                 "id": f"notif-{generate_unique_id()}",
-#                 "user_id": observation["traineeId"],
-#                 "initiator_id": supervisor["staffId"],
-#                 "event_id": observation_id,
-#                 "type": "OBSERVATION_FEEDBACK",
-#                 "priority": "HIGH",
-#                 "message": f"Feedback submitted for observation of '{lesson_title}': Score {score}/10. Comments: {data['comments']}",
-#                 "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-#                 "read_status": False
-#             }
-#             notifications.append(notification)
-#             users["notifications"] = notifications
-            
-#             # Save changes
-#             users["observations"] = [o if o["id"] != observation_id else observation for o in users.get("observations", [])]
-#             save_users(users)
-        
-#         logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor_id}")
-#         return jsonify({
-#             "message": "Feedback submitted successfully",
-#             "observation": observation,
-#             "feedback": feedback
-#         }), 200
-#     except Exception as e:
-#         logger.error(f"Error submitting observation feedback: {str(e)}")
-#         return jsonify({"error": "Failed to submit feedback", "details": str(e)}), 500
-
-
-# @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
-# def submit_observation_feedback(supervisor_id, observation_id):
-#     decoded, error_response = require_auth("supervisor")
-#     if error_response:
-#         return jsonify(error_response), error_response["status"]
-    
-#     # Load user data
-#     users_data = load_users()
-    
-#     # Log debugging information
-#     logger.info(f"Decoded identifier: {decoded['identifier']}")
-#     # logger.info(f"Supervisor data: {users_data.get('supervisor', [])}")
-    
-#     internal_supervisor_id = get_user_id(decoded['identifier'],users_data)
-#     # Validate supervisor
-#     supervisor = next((s for s in users_data.get("supervisor", []) if s["staffId"] == decoded["identifier"]), None)
-   
-#     if not supervisor:
-#         return jsonify({"error": "Supervisor not found"}), 404
-#     if decoded["identifier"] != supervisor["staffId"]:
-#         return jsonify({"error": "Unauthorized: You can only submit feedback for your observations"}), 403
-    
-#     # Validate observation
-#     observation = next((o for o in users_data.get("observations", []) if o["id"] == observation_id and o["supervisorId"] == internal_supervisor_id), None)
-#     logger.info(f"Found observation: {observation}")
-#     if not observation:
-#         return jsonify({"error": "Observation not found or not assigned to you"}), 404
-#     if observation["status"] != "completed":
-#         return jsonify({"error": "Feedback can only be submitted for completed observations"}), 400
-    
-#     # Validate request data
-#     data = request.get_json() or {}
-#     required_fields = ["score", "comments"]
-#     if not all(field in data for field in required_fields):
-#         return jsonify({"error": "Missing required fields: score, comments"}), 400
-#     try:
-#         score = int(data["score"])
-#         if not 0 <= score <= 10:
-#             return jsonify({"error": "Score must be between 0 and 10"}), 400
-#     except (ValueError, TypeError):
-#         return jsonify({"error": "Score must be an integer"}), 400
-    
-#     try:
-#         with lock:
-#             # Update observation
-#             observation["score"] = score
-#             observation["comments"] = data["comments"]
-#             observation["completed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            
-#             # Add to observation_feedback for consistency with lesson plan feedback
-#             feedback_id = f"ofb{len(users.get('observation_feedback', [])) + 1}"
-#             feedback = {
-#                 "id": feedback_id,
-#                 "lesson_plan_id": observation.get("lesson_plan_id", None),
-#                 "traineeId": observation["traineeId"],
-#                 "supervisorId": supervisor["id"],
-#                 "score": score,
-#                 "comments": data["comments"],
-#                 "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d")
-#             }
-#             users.setdefault("observation_feedback", []).append(feedback)
-            
-#             # Notify trainee
-#             notifications = users.get("notifications", [])
-#             lesson_plan = next((lp for lp in users.get("lesson_plans", []) if lp["id"] == observation.get("lesson_plan_id")), None)
-#             lesson_title = lesson_plan["title"] if lesson_plan else "Lesson"
-#             notification = {
-#                 "id": f"notif-{generate_unique_id()}",
-#                 "user_id": observation["traineeId"],
-#                 "initiator_id": supervisor["staffId"],
-#                 "event_id": observation_id,
-#                 "type": "OBSERVATION_FEEDBACK",
-#                 "priority": "HIGH",
-#                 "message": f"Feedback submitted for observation of '{lesson_title}': Score {score}/10. Comments: {data['comments']}",
-#                 "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-#                 "read_status": False
-#             }
-#             notifications.append(notification)
-#             users["notifications"] = notifications
-            
-#             # Save changes
-#             users["observations"] = [o if o["id"] != observation_id else observation for o in users.get("observations", [])]
-#             save_users(users)
-        
-#         logger.info(f"Feedback submitted for observation {observation_id} by supervisor {supervisor['staffId']}")
-#         return jsonify({
-#             "message": "Feedback submitted successfully",
-#             "observation": observation,
-#             "feedback": feedback
-#         }), 200
-#     except Exception as e:
-#         logger.error(f"Error submitting observation feedback: {str(e)}")
-#         return jsonify({"error": "Failed to submit feedback", "details": str(e)}), 500
-
 
 @app.route("/api/supervisors/<supervisor_id>/observations/<observation_id>/feedback", methods=["POST"])
 def submit_observation_feedback(supervisor_id, observation_id):
@@ -5333,334 +5058,6 @@ def normalize_time(time_str):
 
 def normalize_datetime(dt_str):
     return dt_str if dt_str else datetime.now().isoformat()
-
-
-# @app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
-# def get_supervisor_profile(id):
-#     if request.method == "OPTIONS":
-#         logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
-#         response = jsonify({"status": "ok"})
-#         return response, 200
-    
-#     decoded, error_response = require_auth(["supervisor", "admin"])
-#     if error_response:
-#         return jsonify(error_response), error_response["status"]
-    
-#     try:
-#         supervisor_id = get_user_id(id,users)
-#         # Validate supervisor exists
-#         supervisor = next((s for s in users.get("supervisor", []) if s["id"] == supervisor_id ), None)
-#         if not supervisor:
-#             logger.warning(f"Supervisor not found for id/staffId: {id}")
-#             return jsonify({"error": f"Supervisor not found: {id}"}), 404
-        
-#         # Access control
-#         if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
-#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
-#             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
-        
-#         # Enrich supervisor data
-#         s_copy = supervisor.copy()
-
- 
-        
-#         # Get assigned trainees
-#         assignments = users.get("tp_assignments", [])
-#         trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
-#         trainees = [
-#             {
-#                 "id": t["id"],
-#                 "name": t["name"],
-#                 "surname": t["surname"],
-#                 "regNo": t["regNo"],
-#                 "email": t["email"]
-#             }
-#             for t in users.get("teacherTrainee", [])
-#             if t["id"] in trainee_ids
-#         ]
-#         s_copy["assignedTrainees"] = trainees
-      
-        
-#         # Get lesson plans
-#         lesson_plans = [
-#             lp for lp in users.get("lesson_plans", [])
-#             if lp.get("supervisorId") == supervisor["id"]
-#         ]
-#         s_copy["lessonPlans"] = [
-#             {
-#                 "id": lp.get("id", ""),
-#                 "traineeId": lp.get("traineeId", ""),
-#                 "supervisorId":lp.get("supervisorId",""),
-#                 "title": lp.get("title", "Untitled"),
-#                 "subject": lp.get("subject", "Unknown"),
-#                 "class": lp.get("class", "Unknown"),
-#                 "date": lp.get("date", datetime.now().strftime("%Y-%m-%d")),
-#                 "startTime": normalize_time(lp.get("startTime", None)),
-#                 "endTime": normalize_time(lp.get("endTime", None)),
-#                 "objectives": lp.get("objectives", ""),
-#                 "activities": lp.get("activities", ""),
-#                 "resources": lp.get("resources", ""),
-#                 "createdAt": normalize_datetime(lp.get("createdAt", datetime.now().isoformat())),
-#                 "status": lp.get("status", "PENDING"),
-#                 "aiGenerated": lp.get("aiGenerated", False),
-#                 "traineeName": next(
-#                     (t["name"] + " " + t["surname"] for t in trainees if t["id"] == lp.get("traineeId")),
-#                     "Unknown"
-#                 ),
-#                 "supervisorName": f"{supervisor['name']} {supervisor['surname']}",
-#                 "schoolName": next(
-#                     (s["name"] for s in users.get("schools", []) if s.get("traineeId") == lp.get("traineeId")),
-#                     "Unknown"
-#                 ),
-#                 "pdfUrl": lp.get("pdfUrl", None)
-#             }
-#             for lp in lesson_plans
-#         ]
-        
-         
-
-       
-
-#         # Log missing fields
-#         for lp in s_copy["lessonPlans"]:
-#             missing_fields = []
-#             required_fields = ["supervisorName", "schoolName", "class", "traineeName", "objectives", "activities", "resources"]
-#             for field in required_fields:
-#                 if not lp.get(field) or lp.get(field) == "Unknown":
-#                     missing_fields.append(field)
-#             if missing_fields:
-#                 logger.warning(f"Lesson plan ID {lp['id']} missing fields: {missing_fields}, LessonPlan: {lp}")
-        
-#         # Get observation schedules
-#         schedules = [
-#             s for s in users.get("supervisor_schedule", [])
-#             if s["supervisorId"] == supervisor["id"]
-#         ]
-#         s_copy["schedules"] = [
-#             {
-#                 "id": s.get("id", ""),
-#                 "lesson_plan_id": s.get("lesson_plan_id", ""),
-#                 "traineeId": s.get("traineeId", ""),
-#                 "date": s.get("date", ""),
-#                 "start_time": normalize_time(s.get("start_time", "")),
-#                 "end_time": normalize_time(s.get("end_time", "")),
-#                 "status": s.get("status", "SCHEDULED"),
-#                 "created_at": normalize_datetime(s.get("created_at", ""))
-#             }
-#             for s in schedules
-#         ]
-        
-#         # Ensure all required fields with defaults
-#         safe_supervisor = {
-#             "id": s_copy.get("id", ""),
-#             "staffId": s_copy.get("staffId", ""),
-#             "name": s_copy.get("name", ""),
-#             "surname": s_copy.get("surname", ""),
-#             "email": s_copy.get("email", ""),
-#             "phone": s_copy.get("phone", ""),
-#             "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
-#             "assignedTrainees": s_copy["assignedTrainees"],
-#             "lessonPlans": s_copy["lessonPlans"],
-#             "schedules": s_copy["schedules"]
-#         }
-#         # print(f"SUPERVISOR DATA: ",safe_supervisor["lessonPlans"] )
-        
-#         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
-#         response = jsonify(safe_supervisor)
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-    
-#     except Exception as e:
-#         logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
-#         return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
-
-
-# @app.route("/api/getsupervisors/<id>", methods=["GET", "OPTIONS"])
-# def get_supervisor_profile(id):
-#     if request.method == "OPTIONS":
-#         logger.debug(f"Handling OPTIONS for /api/getsupervisors/{id}, headers: {request.headers}")
-#         response = jsonify({"status": "ok"})
-#         return response, 200
-    
-#     decoded, error_response = require_auth(["supervisor", "admin"])
-#     if error_response:
-#         return jsonify(error_response), error_response["status"]
-    
-#     try:
-#         users_data=load_users()
-#         supervisor_id = get_user_id(id, users_data)
-#         # Validate supervisor exists
-#         supervisor = next((s for s in users_data.get("supervisor", []) if s["id"] == supervisor_id), None)
-#         if not supervisor:
-#             logger.warning(f"Supervisor not found for id/staffId: {id}")
-#             return jsonify({"error": f"Supervisor not found: {id}"}), 404
-        
-#         # Access control
-#         if decoded["role"] == "supervisor" and decoded["identifier"] != supervisor["staffId"]:
-#             logger.warning(f"Unauthorized access attempt: {decoded['identifier']} tried to access supervisor {id}")
-#             return jsonify({"error": "Unauthorized: You can only access your own profile"}), 403
-        
-#         # Enrich supervisor data
-#         s_copy = supervisor.copy()
-        
-#         # Get assigned trainees
-#         assignments = users_data.get("tp_assignments", [])
-#         trainee_ids = [a["traineeId"] for a in assignments if a["supervisorId"] == supervisor["id"]]
-#         trainees = [
-#             {
-#                 "id": t["id"],
-#                 "name": t["name"],
-#                 "surname": t["surname"],
-#                 "regNo": t["regNo"],
-#                 "email": t["email"]
-#             }
-#             for t in users_data.get("teacherTrainee", [])
-#             if t["id"] in trainee_ids
-#         ]
-#         s_copy["assignedTrainees"] = trainees
-        
-#         # Get lesson plans, sorted by createdAt descending
-#         lesson_plans = sorted(
-#             [
-#                 lp for lp in users_data.get("lesson_plans", [])
-#                 if lp.get("supervisorId") == supervisor["id"]
-#             ],
-#             key=lambda lp: lp.get("createdAt", datetime.now().isoformat()),
-#             reverse=True
-#         )
-#         s_copy["lessonPlans"] = [
-#             {
-#                 "id": lp.get("id", ""),
-#                 "traineeId": lp.get("traineeId", ""),
-#                 "supervisorId": lp.get("supervisorId", ""),
-#                 "title": lp.get("title", "Untitled"),
-#                 "subject": lp.get("subject", "Unknown"),
-#                 "class": lp.get("class", "Unknown"),
-#                 "date": lp.get("date", datetime.now().strftime("%Y-%m-%d")),
-#                 "startTime": normalize_time(lp.get("startTime", None)),
-#                 "endTime": normalize_time(lp.get("endTime", None)),
-#                 "objectives": lp.get("objectives", ""),
-#                 "activities": lp.get("activities", ""),
-#                 "resources": lp.get("resources", ""),
-#                 "createdAt": normalize_datetime(lp.get("createdAt", datetime.now().isoformat())),
-#                 "status": lp.get("status", "PENDING"),
-#                 "aiGenerated": lp.get("aiGenerated", False),
-#                 "traineeName": next(
-#                     (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == lp.get("traineeId")),
-#                     lp.get("traineeId", "Unknown Trainee")
-#                 ),
-#                 "supervisorName": f"{supervisor['name']} {supervisor['surname']}",
-#                 "schoolName": next(
-#                     (s["name"] for s in users_data.get("schools", []) if s["id"] == lp.get("schoolId")),
-#                     "Not Assigned"
-#                 ),
-#                 "pdfUrl": lp.get("pdfUrl", None)
-#             }
-#             for lp in lesson_plans
-#         ]
-        
-#         # Validate lesson plan data
-#         valid_trainees = {t["id"] for t in users_data.get("teacherTrainee", [])}
-#         valid_schools = {s["id"] for s in users_data.get("schools", [])}
-#         for lp in s_copy["lessonPlans"]:
-#             if lp["traineeId"] not in valid_trainees:
-#                 logger.warning(f"Lesson plan {lp['id']} has invalid traineeId: {lp['traineeId']}")
-#             if lp.get("schoolId") and lp["schoolId"] not in valid_schools:
-#                 logger.warning(f"Lesson plan {lp['id']} has invalid schoolId: {lp['schoolId']}")
-            
-#             # Log missing fields
-#             missing_fields = []
-#             required_fields = ["supervisorName", "schoolName", "class", "traineeName", "objectives", "activities", "resources"]
-#             for field in required_fields:
-#                 if not lp.get(field) or lp.get(field) in ["Unknown", "Unknown Trainee", "Not Assigned"]:
-#                     missing_fields.append(field)
-#             if missing_fields:
-#                 logger.warning(f"Lesson plan ID {lp['id']} missing fields: {missing_fields}, LessonPlan: {lp}")
-        
-#         # Get observation schedules
-#         schedules = [
-#             s for s in users_data.get("supervisor_schedule", [])
-#             if s["supervisorId"] == supervisor["id"]
-#         ]
-#         # s_copy["schedules"] = [
-#         #     {
-#         #         "id": s.get("id", ""),
-#         #         "lesson_plan_id": s.get("lesson_plan_id", ""),
-#         #         "traineeId": s.get("traineeId", ""),
-#         #         "date": s.get("date", ""),
-#         #         "start_time": normalize_time(s.get("start_time", "")),
-#         #         "end_time": normalize_time(s.get("end_time", "")),
-#         #         "status": s.get("status", "SCHEDULED"),
-#         #         "created_at": normalize_datetime(s.get("created_at", ""))
-           
-
-
-#         #     }
-#         #     for s in schedules
-#         # ]
-    
-
-
-
-
-
-#         s_copy["schedules"] = [
-#                     {
-#                         "id": s.get("id", ""),
-#                         "lesson_plan_id": s.get("lesson_plan_id", ""),
-#                         "traineeId": s.get("traineeId", ""),
-#                         "date": s.get("date", ""),
-#                         "start_time": normalize_time(s.get("start_time", "")),
-#                         "end_time": normalize_time(s.get("end_time", "")),
-#                         "status": s.get("status", "SCHEDULED"),
-#                         "created_at": normalize_datetime(s.get("created_at", "")),
-#                         "lessonPlanTitle": s.get("lessonPlanTitle", next(
-#                             (lp["title"] for lp in lesson_plans if lp["id"] == s.get("lesson_plan_id")),
-#                             "Unknown Lesson Plan"
-#                         )),
-#                         "traineeName": s.get("traineeName", next(
-#                             (t["name"] + " " + t["surname"] for t in users_data.get("teacherTrainee", []) if t["id"] == s.get("traineeId")),
-#                             "Unknown Trainee"
-#                         ))
-#                     }
-#                     for s in schedules
-#                 ]
-
-
-
-
-
-
-
-
-
-#         # Ensure all required fields with defaults
-#         safe_supervisor = {
-#             "id": s_copy.get("id", ""),
-#             "staffId": s_copy.get("staffId", ""),
-#             "name": s_copy.get("name", ""),
-#             "surname": s_copy.get("surname", ""),
-#             "email": s_copy.get("email", ""),
-#             "phone": s_copy.get("phone", ""),
-#             "createdAt": normalize_datetime(s_copy.get("createdAt", "")),
-#             "assignedTrainees": s_copy["assignedTrainees"],
-#             "lessonPlans": s_copy["lessonPlans"],
-#             "schedules": s_copy["schedules"]
-#         }
-        
-#         logger.info(f"Fetched profile for supervisor {decoded['identifier']}")
-#         response = jsonify(safe_supervisor)
-#         response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         return response, 200
-    
-#     except Exception as e:
-#         logger.error(f"Error fetching supervisor profile: {str(e)}", exc_info=True)
-#         return jsonify({"error": "Failed to fetch supervisor profile", "details": str(e)}), 500
-
-
-
 
 
 
