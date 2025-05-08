@@ -41,35 +41,14 @@ load_dotenv()
 
 
 
-app = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000", "http://localhost:5173"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Authorization", "Content-Type"],
-        "supports_credentials": True
-    }
-})
 
 
 SECRET_KEY = "TPMA2025"
-USERS_FILE = "users.json"
-ITEMS_PER_PAGE = 10
-
-
-# Initialize threading lock
-lock = Lock()  # Define global lock
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)  # Changed to DEBUG for more granularity
 logger = logging.getLogger(__name__)
 
-
-
-# Initialize html2text
-h = html2text.HTML2Text()
-h.ignore_links = True
-h.ignore_images = True
 
 
 
@@ -199,13 +178,18 @@ def require_3auth(allowed_roles: Optional[Union[str, List[str]]] = None) -> Tupl
 
     logger.debug("Authentication successful")
     return decoded, None
+
+
+
+
 def get_trainee_assignment(trainee_id: str) -> Optional[dict]:
-    assignment = next((a for a in users.get("tp_assignments", []) if a["traineeId"] == trainee_id), None)
+    users_data=load_users()
+    assignment = next((a for a in users_data.get("tp_assignments", []) if a["traineeId"] == trainee_id), None)
     if not assignment:
         return None
     
     # Look up the school name
-    schools = users.get("schools", [])
+    schools = users_data.get("schools", [])
     school = next((s for s in schools if s["id"] == assignment["schoolId"]), None)
     school_name = school["name"] if school else "Unknown School"
     
@@ -213,7 +197,7 @@ def get_trainee_assignment(trainee_id: str) -> Optional[dict]:
     supervisor_id = assignment.get("supervisorId")
     supervisor_name = "Not Assigned"
     if supervisor_id:
-        supervisors = users.get("supervisor", [])
+        supervisors = users_data.get("supervisor", [])
         supervisor = next((s for s in supervisors if s["id"] == supervisor_id), None)
         if supervisor:
             supervisor_name = f"{supervisor['name']} {supervisor['surname']}"

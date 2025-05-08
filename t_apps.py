@@ -946,11 +946,15 @@ def manage_trainee(id):
 
 
 @app.route('/api/tp-assignments/<trainee_id>', methods=['GET', 'OPTIONS'])
-@_require_auth(['admin', 'teacherTrainee'])
-def get_tp_assignment(decoded, trainee_id):
+# @_require_auth(['admin', 'teacherTrainee'])
+def get_tp_assignment(trainee_id):
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
         return response, 200
+    
+    decoded, error_response = require_auth(['admin', 'teacherTrainee'])
+    if error_response:
+        return error_response
 
     try:
         users_data = load_users()
@@ -1043,7 +1047,7 @@ def get_tp_assignment(decoded, trainee_id):
 
 @app.route("/api/places-of-tp", methods=["GET"])
 def get_places_of_tp():
-    decoded, error_response = require_admin_auth()
+    decoded, error_response = require_auth()
     if error_response:
         return error_response
 
@@ -1080,75 +1084,182 @@ def check_tp_period():
     logger.info(f"Checked TP periods: {len(pending_evaluations)} pending evaluations")
     return jsonify({"pending_evaluations": len(pending_evaluations)})
 
+
+
+
+
+# @app.route("/api/admin/tp_assignments", methods=["GET"])
+# def tp_assignments():
+#     decoded, error_response = require_auth(["admin"])
+#     if error_response:
+#         return error_response
+#     data = load_users()
+#     page = int(request.args.get("page", 1))
+#     search = request.args.get("search", "")
+#     assignments = data.get("tp_assignments", [])
+#     supervisors = {s["id"]: s for s in data.get("supervisor", [])}
+#     trainees = {t["id"]: t for t in data.get("teacherTrainee", [])}
+#     schools = {s["id"]: s for s in data.get("schools", [])}
+
+#     enriched_assignments = []
+#     for a in assignments:
+#         assignment = a.copy()
+#         if "start_date" in assignment:
+#             assignment["startDate"] = assignment.pop("start_date")
+#         if "end_date" in assignment:
+#             assignment["endDate"] = assignment.pop("end_date")
+#         for date_key in ["startDate", "endDate"]:
+#             date_val = assignment.get(date_key)
+#             if date_val and not is_valid_date(date_val):
+#                 logger.warning(f"Invalid {date_key} in assignment {a.get('id')}: {date_val}")
+#                 assignment[date_key] = ""
+#         supervisor = supervisors.get(a.get("supervisorId"))
+#         if supervisor:
+#             assignment["supervisor"] = {
+#                 "id": supervisor["id"],
+#                 "staffId": supervisor.get("staffId", supervisor["id"]),
+#                 "name": supervisor.get("name", ""),
+#                 "surname": supervisor.get("surname", "")
+#             }
+#         trainee = trainees.get(a.get("traineeId"))
+#         if trainee:
+#             assignment["trainee"] = {
+#                 "id": trainee["id"],
+#                 "regNo": trainee.get("regNo", trainee["id"]),
+#                 "name": trainee.get("name", ""),
+#                 "surname": trainee.get("surname", "")
+#             }
+#         school = schools.get(a.get("schoolId"))
+#         if school:
+#             assignment["school"] = {
+#                 "id": school["id"],
+#                 "name": school.get("name", "")
+#             }
+#         enriched_assignments.append(assignment)
+
+#     if search:
+#         enriched_assignments = [
+#             a for a in enriched_assignments
+#             if (a.get("trainee") and search.lower() in f"{a['trainee']['name']} {a['trainee']['surname']}".lower()) or
+#                (a.get("supervisor") and search.lower() in f"{a['supervisor']['name']} {a['supervisor']['surname']}".lower()) or
+#                search.lower() in a["traineeId"].lower() or
+#                search.lower() in a["supervisorId"].lower()
+#         ]
+
+#     total_count = len(enriched_assignments)
+#     per_page = ITEMS_PER_PAGE
+#     start = (page - 1) * per_page
+#     end = start + per_page
+#     paginated = enriched_assignments[start:end]
+#     logger.info(f"Fetched {len(paginated)} TP assignments for page {page}")
+#     return jsonify({
+#         "assignments": paginated,
+#         "totalCount": total_count,
+#         "totalPages": (total_count + per_page - 1) // per_page
+#     }), 200
+
+
+
+
+
+
+
 @app.route("/api/admin/tp_assignments", methods=["GET"])
 def tp_assignments():
     decoded, error_response = require_auth(["admin"])
     if error_response:
         return error_response
-    data = users
+
     page = int(request.args.get("page", 1))
-    search = request.args.get("search", "")
-    assignments = data.get("tp_assignments", [])
-    supervisors = {s["id"]: s for s in data.get("supervisor", [])}
-    trainees = {t["id"]: t for t in data.get("teacherTrainee", [])}
-    schools = {s["id"]: s for s in data.get("schools", [])}
-
-    enriched_assignments = []
-    for a in assignments:
-        assignment = a.copy()
-        if "start_date" in assignment:
-            assignment["startDate"] = assignment.pop("start_date")
-        if "end_date" in assignment:
-            assignment["endDate"] = assignment.pop("end_date")
-        for date_key in ["startDate", "endDate"]:
-            date_val = assignment.get(date_key)
-            if date_val and not is_valid_date(date_val):
-                logger.warning(f"Invalid {date_key} in assignment {a.get('id')}: {date_val}")
-                assignment[date_key] = ""
-        supervisor = supervisors.get(a.get("supervisorId"))
-        if supervisor:
-            assignment["supervisor"] = {
-                "id": supervisor["id"],
-                "staffId": supervisor.get("staffId", supervisor["id"]),
-                "name": supervisor.get("name", ""),
-                "surname": supervisor.get("surname", "")
-            }
-        trainee = trainees.get(a.get("traineeId"))
-        if trainee:
-            assignment["trainee"] = {
-                "id": trainee["id"],
-                "regNo": trainee.get("regNo", trainee["id"]),
-                "name": trainee.get("name", ""),
-                "surname": trainee.get("surname", "")
-            }
-        school = schools.get(a.get("schoolId"))
-        if school:
-            assignment["school"] = {
-                "id": school["id"],
-                "name": school.get("name", "")
-            }
-        enriched_assignments.append(assignment)
-
+    search = request.args.get("search", "").lower()
+    
+    # Query assignments with related data
+    query = TPAssignment.query
     if search:
-        enriched_assignments = [
-            a for a in enriched_assignments
-            if (a.get("trainee") and search.lower() in f"{a['trainee']['name']} {a['trainee']['surname']}".lower()) or
-               (a.get("supervisor") and search.lower() in f"{a['supervisor']['name']} {a['supervisor']['surname']}".lower()) or
-               search.lower() in a["traineeId"].lower() or
-               search.lower() in a["supervisorId"].lower()
-        ]
+        query = query.join(Trainee).join(Supervisor).filter(
+            db.or_(
+                Trainee.name.ilike(f'%{search}%'),
+                Trainee.surname.ilike(f'%{search}%'),
+                Trainee.regNo.ilike(f'%{search}%'),
+                Supervisor.name.ilike(f'%{search}%'),
+                Supervisor.surname.ilike(f'%{search}%'),
+                TPAssignment.traineeId.ilike(f'%{search}%'),
+                TPAssignment.supervisorId.ilike(f'%{search}%')
+            )
+        )
 
-    total_count = len(enriched_assignments)
+    total_count = query.count()
     per_page = ITEMS_PER_PAGE
     start = (page - 1) * per_page
     end = start + per_page
-    paginated = enriched_assignments[start:end]
-    logger.info(f"Fetched {len(paginated)} TP assignments for page {page}")
-    return jsonify({
-        "assignments": paginated,
-        "totalCount": total_count,
-        "totalPages": (total_count + per_page - 1) // per_page
-    }), 200
+
+    # Fetch paginated assignments
+    assignments = query.offset(start).limit(per_page).all()
+    logger.info(f"Queried {total_count} TP assignments, fetching page {page} with {len(assignments)} items")
+
+    enriched_assignments = []
+    for a in assignments:
+        assignment = {
+            'id': a.id,
+            'traineeId': a.traineeId,
+            'schoolId': a.schoolId,
+            'supervisorId': a.supervisorId,
+            'startDate': a.start_date or '',
+            'endDate': a.end_date or ''
+        }
+        
+        # Validate dates
+        for date_key in ['startDate', 'endDate']:
+            date_val = assignment.get(date_key)
+            if date_val and not is_valid_date(date_val):
+                logger.warning(f"Invalid {date_key} in assignment {a.id}: {date_val}")
+                assignment[date_key] = ''
+
+        # Fetch related data
+        supervisor = Supervisor.query.get(a.supervisorId)
+        if supervisor:
+            assignment['supervisor'] = {
+                'id': supervisor.id,
+                'staffId': supervisor.staffId,
+                'name': supervisor.name or '',
+                'surname': supervisor.surname or ''
+            }
+
+        trainee = Trainee.query.get(a.traineeId)
+        if trainee:
+            assignment['trainee'] = {
+                'id': trainee.id,
+                'regNo': trainee.regNo,
+                'name': trainee.name or '',
+                'surname': trainee.surname or ''
+            }
+
+        school = School.query.get(a.schoolId)
+        if school:
+            assignment['school'] = {
+                'id': school.id,
+                'name': school.name or ''
+            }
+
+        enriched_assignments.append(assignment)
+
+    logger.info(f"Returning {len(enriched_assignments)} enriched TP assignments for page {page}")
+
+    # Set Cache-Control header to prevent caching
+    response = jsonify({
+        'assignments': enriched_assignments,
+        'totalCount': total_count,
+        'totalPages': (total_count + per_page - 1) // per_page,
+        'currentPage': page
+    })
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response, 200
+
+
+
+
+
+
 
 @app.route("/api/admin/tp_assignments", methods=["POST"])
 def create_tp_assignment():
@@ -1175,7 +1286,7 @@ def create_tp_assignment():
     users_data = users
 
     new_assignment = {
-        "id": generate_unique_id(),
+        "id": f"tp {generate_unique_id()}",
         "traineeId": data.get("traineeId"),
         "supervisorId": data.get("supervisorId"),
         "schoolId": data.get("schoolId"),
@@ -3789,7 +3900,7 @@ def get_trainee_profiles(id):
             response = jsonify({"error": "Internal server error: No trainees available"})
             return response, 500
 
-        trainee = next((t for t in teacher_trainees if t["id"] == id or t["regNo"] == id), None)
+        trainee = next((t for t in teacher_trainees if t["id"] == id or t["regNo"] == decoded['identifier']), None)
         if not trainee:
             logger.warning(f"Trainee not found for id/regNo: {id}")
             response = jsonify({"error": f"Trainee not found: {id}"})
@@ -3806,8 +3917,8 @@ def get_trainee_profiles(id):
         t_copy = trainee.copy()
         
         # Get TP assignment details with enhanced status logic
-        assignment = get_trainee_assignment(t_copy["id"])
-        print(assignment)
+        assignment = get_trainee_assignment(trainee['id'])
+        print(f" TPMA Assignment FOR TRAINEEE {trainee['id']} is {assignment}")
         if assignment:
             status = "Assigned"
             try:
