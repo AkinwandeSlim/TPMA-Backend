@@ -1159,103 +1159,107 @@ def check_tp_period():
 #     }), 200
 
 
-
-
-
-
-
 @app.route("/api/admin/tp_assignments", methods=["GET"])
 def tp_assignments():
     decoded, error_response = require_auth(["admin"])
     if error_response:
         return error_response
 
+    # Load fresh data from users.json
+    data = load_users()
     page = int(request.args.get("page", 1))
     search = request.args.get("search", "").lower()
-    
-    # Query assignments with related data
-    query = TPAssignment.query
-    if search:
-        query = query.join(Trainee).join(Supervisor).filter(
-            db.or_(
-                Trainee.name.ilike(f'%{search}%'),
-                Trainee.surname.ilike(f'%{search}%'),
-                Trainee.regNo.ilike(f'%{search}%'),
-                Supervisor.name.ilike(f'%{search}%'),
-                Supervisor.surname.ilike(f'%{search}%'),
-                TPAssignment.traineeId.ilike(f'%{search}%'),
-                TPAssignment.supervisorId.ilike(f'%{search}%')
-            )
-        )
 
-    total_count = query.count()
-    per_page = ITEMS_PER_PAGE
-    start = (page - 1) * per_page
-    end = start + per_page
+    assignments = data.get("tp_assignments", [])
+    supervisors = {s["id"]: s for s in data.get("supervisor", [])}
+    trainees = {t["id"]: t for t in data.get("teacherTrainee", [])}
+    schools = {s["id"]: s for s in data.get("schools", [])}
 
-    # Fetch paginated assignments
-    assignments = query.offset(start).limit(per_page).all()
-    logger.info(f"Queried {total_count} TP assignments, fetching page {page} with {len(assignments)} items")
+    logger.info(f"Loaded {len(assignments)} TP assignments before filtering")
 
     enriched_assignments = []
     for a in assignments:
-        assignment = {
-            'id': a.id,
-            'traineeId': a.traineeId,
-            'schoolId': a.schoolId,
-            'supervisorId': a.supervisorId,
-            'startDate': a.start_date or '',
-            'endDate': a.end_date or ''
-        }
+        assignment = a.copy()
+        # Normalize date keys
+        if "start_date" in assignment:
+            assignment["startDate"] = assignment.pop("start_date")
+        if "end_date" in assignment:
+            assignment["endDate"] = assignment.pop("end_date")
         
         # Validate dates
-        for date_key in ['startDate', 'endDate']:
+        for date_key in ["startDate", "endDate"]:
             date_val = assignment.get(date_key)
             if date_val and not is_valid_date(date_val):
-                logger.warning(f"Invalid {date_key} in assignment {a.id}: {date_val}")
-                assignment[date_key] = ''
+                logger.warning(f"Invalid {date_key} in assignment {a.get('id')}: {date_val}")
+                assignment[date_key] = ""
 
-        # Fetch related data
-        supervisor = Supervisor.query.get(a.supervisorId)
+        # Enrich with supervisor data
+        supervisor = supervisors.get(a.get("supervisorId"))
         if supervisor:
-            assignment['supervisor'] = {
-                'id': supervisor.id,
-                'staffId': supervisor.staffId,
-                'name': supervisor.name or '',
-                'surname': supervisor.surname or ''
+            assignment["supervisor"] = {
+                "id": supervisor["id"],
+                "staffId": supervisor.get("staffId", supervisor["id"]),
+                "name": supervisor.get("name", ""),
+                "surname": supervisor.get("surname", "")
             }
 
-        trainee = Trainee.query.get(a.traineeId)
+        # Enrich with trainee data
+        trainee = trainees.get(a.get("traineeId"))
         if trainee:
-            assignment['trainee'] = {
-                'id': trainee.id,
-                'regNo': trainee.regNo,
-                'name': trainee.name or '',
-                'surname': trainee.surname or ''
+            assignment["trainee"] = {
+                "id": trainee["id"],
+                "regNo": trainee.get("regNo", trainee["id"]),
+                "name": trainee.get("name", ""),
+                "surname": trainee.get("surname", "")
             }
 
-        school = School.query.get(a.schoolId)
+        # Enrich with school data
+        school = schools.get(a.get("schoolId"))
         if school:
-            assignment['school'] = {
-                'id': school.id,
-                'name': school.name or ''
+            assignment["school"] = {
+                "id": school["id"],
+                "name": school.get("name", "")
             }
 
         enriched_assignments.append(assignment)
 
-    logger.info(f"Returning {len(enriched_assignments)} enriched TP assignments for page {page}")
+    # Apply search filtering
+    filtered_assignments = enriched_assignments
+    if search:
+        filtered_assignments = [
+            a for a in enriched_assignments
+            if (
+                (a.get("trainee") and (
+                    search in f"{a['trainee']['name']} {a['trainee']['surname']}".lower() or
+                    search in a["trainee"].get("regNo", "").lower()
+                )) or
+                (a.get("supervisor") and (
+                    search in f"{a['supervisor']['name']} {a['supervisor']['surname']}".lower() or
+                    search in a["supervisor"].get("staffId", "").lower()
+                )) or
+                search in a["traineeId"].lower() or
+                search in a["supervisorId"].lower() or
+                (a.get("school") and search in a["school"].get("name", "").lower())
+            )
+        ]
+        logger.info(f"Search '{search}' reduced assignments from {len(enriched_assignments)} to {len(filtered_assignments)}")
 
-    # Set Cache-Control header to prevent caching
+    total_count = len(filtered_assignments)
+    per_page = ITEMS_PER_PAGE
+    start = (page - 1) * per_page
+    end = min(start + per_page, total_count)
+    paginated = filtered_assignments[start:end]
+
+    logger.info(f"Page {page}: Returning {len(paginated)} assignments, total {total_count}, indices {start} to {end}")
+
     response = jsonify({
-        'assignments': enriched_assignments,
-        'totalCount': total_count,
-        'totalPages': (total_count + per_page - 1) // per_page,
-        'currentPage': page
+        "assignments": paginated,
+        "totalCount": total_count,
+        "totalPages": (total_count + per_page - 1) // per_page,
+        "currentPage": page
     })
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response, 200
-
-
 
 
 

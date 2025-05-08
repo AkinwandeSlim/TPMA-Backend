@@ -1304,12 +1304,12 @@
         {
             "id": "1bd40d6c-1d5e-4584-95ad-71bd69a19bf7",
             "traineeId": "141",
-            "schoolId": "school6",
+            "schoolId": "school1",
             "supervisorId": "6",
             "start_date": "2025-05-08",
             "end_date": "2025-05-12",
             "createdAt": "2025-05-07T23:28:10.232267+00:00Z",
-            "updatedAt": "2025-05-08T00:45:47.947094+00:00Z"
+            "updatedAt": "2025-05-08T09:39:49.440941+00:00Z"
         }
     ],
     "evaluations": [
@@ -3542,6 +3542,26 @@
             "priority": "MEDIUM",
             "message": "Your supervision assignment for Trainee10 Student10 at School C has been updated: Start Date: 2025-05-01, End Date: 2025-05-30.",
             "created_at": "2025-05-08T01:01:23.530056+00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-4da74862-12f8-4895-b824-9f9dc3670883",
+            "user_id": "141",
+            "initiator_id": "admin1",
+            "type": "ASSIGNMENT",
+            "priority": "HIGH",
+            "message": "Your TP assignment has been updated: School: School A, Supervisor: Supervisor6 Last6, Start Date: 2025-05-08, End Date: 2025-05-12.",
+            "created_at": "2025-05-08T09:39:49.440941+00:00Z",
+            "read_status": false
+        },
+        {
+            "id": "notif-b944ebb6-f223-47c4-9e14-03f7cab22018",
+            "user_id": "6",
+            "initiator_id": "admin1",
+            "type": "ASSIGNMENT",
+            "priority": "MEDIUM",
+            "message": "Your supervision assignment for Alex Akinwande at School A has been updated: Start Date: 2025-05-08, End Date: 2025-05-12.",
+            "created_at": "2025-05-08T09:39:49.440941+00:00Z",
             "read_status": false
         }
     ],
